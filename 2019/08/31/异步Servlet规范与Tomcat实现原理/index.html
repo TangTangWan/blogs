@@ -1,13 +1,16 @@
 <!DOCTYPE html>
-<html>
-<head><meta name="generator" content="Hexo 3.9.0">
-  <meta charset="utf-8">
-  
+<html  lang="zh">
+<head>
+    <meta charset="utf-8" />
 
-  
-  <title>异步Servlet规范与Tomcat实现原理 | TangTangWan&#39;s Blog</title>
-  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta name="description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。 异步Servlet的Why &amp;amp; What有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是">
+<meta name="generator" content="Hexo 3.9.0" />
+
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1" />
+
+<title>异步Servlet规范与Tomcat实现原理 - TangTangWan&#39;s Blog</title>
+
+
+    <meta name="description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。 异步Servlet的Why &amp;amp; What有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是">
 <meta name="keywords" content="Java,Tomcat">
 <meta property="og:type" content="article">
 <meta property="og:title" content="异步Servlet规范与Tomcat实现原理">
@@ -15,86 +18,157 @@
 <meta property="og:site_name" content="TangTangWan&#39;s Blog">
 <meta property="og:description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。 异步Servlet的Why &amp;amp; What有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是">
 <meta property="og:locale" content="zh-CN">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-ce1f41b7e03d17bd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-a0967ef2e03cc7eb.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-a4bbcf993621f610.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-340e0316d57ab847.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-b18605c364cd41a1.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-df17876395cb5d04.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+<meta property="og:image" content="https://github.com/blogs/images/og_image.png">
 <meta property="og:updated_time" content="2019-08-31T15:15:10.726Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="异步Servlet规范与Tomcat实现原理">
 <meta name="twitter:description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。 异步Servlet的Why &amp;amp; What有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是">
-<meta name="twitter:image" content="https://upload-images.jianshu.io/upload_images/1755236-ce1f41b7e03d17bd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
-  
-    <link rel="alternate" href="/blogs/atom.xml" title="TangTangWan&#39;s Blog" type="application/atom+xml">
-  
-  
-    <link rel="icon" href="/favicon.png">
-  
-  
-    <link href="//fonts.googleapis.com/css?family=Source+Code+Pro" rel="stylesheet" type="text/css">
-  
-  <link rel="stylesheet" href="/blogs/css/style.css">
-</head>
-</html>
-<body>
-  <div id="container">
-    <div id="wrap">
-      <header id="header">
-  <div id="banner"></div>
-  <div id="header-outer" class="outer">
-    <div id="header-title" class="inner">
-      <h1 id="logo-wrap">
-        <a href="/blogs/" id="logo">TangTangWan&#39;s Blog</a>
-      </h1>
-      
-    </div>
-    <div id="header-inner" class="inner">
-      <nav id="main-nav">
-        <a id="main-nav-toggle" class="nav-icon"></a>
-        
-          <a class="main-nav-link" href="/blogs/">Home</a>
-        
-          <a class="main-nav-link" href="/blogs/archives">Archives</a>
-        
-      </nav>
-      <nav id="sub-nav">
-        
-          <a id="nav-rss-link" class="nav-icon" href="/blogs/atom.xml" title="RSS Feed"></a>
-        
-        <a id="nav-search-btn" class="nav-icon" title="搜索"></a>
-      </nav>
-      <div id="search-form-wrap">
-        <form action="//google.com/search" method="get" accept-charset="UTF-8" class="search-form"><input type="search" name="q" class="search-form-input" placeholder="Search"><button type="submit" class="search-form-submit">&#xF002;</button><input type="hidden" name="sitesearch" value="https://github.com/TangTangWan/blogs"></form>
-      </div>
-    </div>
-  </div>
-</header>
-      <div class="outer">
-        <section id="main"><article id="post-异步Servlet规范与Tomcat实现原理" class="article article-type-post" itemscope itemprop="blogPost">
-  <div class="article-meta">
-    <a href="/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/" class="article-date">
-  <time datetime="2019-08-31T15:10:58.000Z" itemprop="datePublished">2019-08-31</time>
-</a>
-    
-  </div>
-  <div class="article-inner">
-    
-    
-      <header class="article-header">
-        
-  
-    <h1 class="article-title" itemprop="name">
-      异步Servlet规范与Tomcat实现原理
-    </h1>
-  
+<meta name="twitter:image" content="https://github.com/blogs/images/og_image.png">
 
-      </header>
+
+
+
+
+
+
+<link rel="icon" href="/blogs/images/favicon.svg">
+
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bulma@0.7.2/css/bulma.css">
+<link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.4.1/css/all.css">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css?family=Ubuntu:400,600|Source+Code+Pro">
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/highlight.js@9.12.0/styles/atom-one-light.css">
+
+
     
-    <div class="article-entry" itemprop="articleBody">
-      
-        <p>本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。</p>
+    
+    
+    <style>body>.footer,body>.navbar,body>.section{opacity:0}</style>
+    
+
+    
+    
+    
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/css/lightgallery.min.css">
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/css/justifiedGallery.min.css">
+    
+
+    
+    
+
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/outdatedbrowser@1.1.5/outdatedbrowser/outdatedbrowser.min.css">
+
+
+    
+    
+    
+    
+
+<link rel="stylesheet" href="/blogs/css/back-to-top.css">
+
+
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+<link rel="stylesheet" href="/blogs/css/progressbar.css">
+<script src="https://cdn.jsdelivr.net/npm/pace-js@1.0.2/pace.min.js"></script>
+
+    
+    
+    
+
+
+<link rel="stylesheet" href="/blogs/css/style.css">
+</head>
+<body class="is-3-column">
+    <nav class="navbar navbar-main">
+    <div class="container">
+        <div class="navbar-brand is-flex-center">
+            <a class="navbar-item navbar-logo" href="/blogs/">
+            
+                <img src="/blogs/images/logo.svg" alt="异步Servlet规范与Tomcat实现原理" height="28">
+            
+            </a>
+        </div>
+        <div class="navbar-menu">
+            
+            <div class="navbar-start">
+                
+                <a class="navbar-item"
+                href="/blogs/">Home</a>
+                
+                <a class="navbar-item"
+                href="/blogs/archives">Archives</a>
+                
+                <a class="navbar-item"
+                href="/blogs/categories">Categories</a>
+                
+                <a class="navbar-item"
+                href="/blogs/tags">Tags</a>
+                
+                <a class="navbar-item"
+                href="/blogs/about">About</a>
+                
+            </div>
+            
+            <div class="navbar-end">
+                
+                    
+                    
+                    <a class="navbar-item" target="_blank" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus">
+                        
+                        <i class="fab fa-github"></i>
+                        
+                    </a>
+                    
+                
+                
+                
+                <a class="navbar-item search" title="搜索" href="javascript:;">
+                    <i class="fas fa-search"></i>
+                </a>
+                
+            </div>
+        </div>
+    </div>
+</nav>
+    
+    <section class="section">
+        <div class="container">
+            <div class="columns">
+                <div class="column is-8-tablet is-8-desktop is-6-widescreen has-order-2 column-main"><div class="card">
+    
+    <div class="card-content article ">
+        
+        <div class="level article-meta is-size-7 is-uppercase is-mobile is-overflow-x-auto">
+            <div class="level-left">
+                <time class="level-item has-text-grey" datetime="2019-08-31T15:10:58.000Z">2019-08-31</time>
+                
+                
+                <span class="level-item has-text-grey">
+                    
+                    
+                    23 分钟 读完 (大约 3524 个字)
+                </span>
+                
+                
+            </div>
+        </div>
+        
+        <h1 class="title is-size-3 is-size-4-mobile has-text-weight-normal">
+            
+                异步Servlet规范与Tomcat实现原理
+            
+        </h1>
+        <div class="content">
+            <p>本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。</p>
 <h2 id="异步Servlet的Why-amp-What"><a href="#异步Servlet的Why-amp-What" class="headerlink" title="异步Servlet的Why &amp; What"></a>异步Servlet的Why &amp; What</h2><p>有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是一个低效的操作，因为这是阻塞操作，从而白白占用一个 线程或其他一些受限资源。</p>
 <p>Servlet 3.0 引入了异步处理请求的能力，使线程可以返回到容器，从而执行更多的任务。一个典型的异步处理事件顺序是:</p>
 <ol>
@@ -140,45 +214,45 @@
 <h2 id="异步servlet与Tomcat线程池"><a href="#异步servlet与Tomcat线程池" class="headerlink" title="异步servlet与Tomcat线程池"></a>异步servlet与Tomcat线程池</h2><p>最基础的架子和之前说的非异步的servlet一样，只是每次请求都会进入tomcat线程池至少两次。</p>
 <p>第一次进入tomcat线程池后，servlet的service方法执行完毕，从CoyoteAdapter返回时，此时根据状态机的状态判断是异步的，不会结束响应，但相应的tomcat线程会被释放。业务线程此时继续执行任务，直到通过AsyncContext.dispatch或者.complete()回调，该回调会将SocketProcessor再次注册到tomcat线程池中，相当于重新开启一个工作线程。而这一遍的流程，因为Servlet已经处理过，所以会略过servlet的执行，直接将后续处理走完，包括对response的收尾，对象的清空等等。以下以spring-boot的tomcat-embed 8.5.43版本为例，具体展开讲讲。</p>
 <h2 id="案例一"><a href="#案例一" class="headerlink" title="案例一"></a>案例一</h2><p>我们的示例代码：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@RequestMapping</span>(<span class="string">"/async"</span>)</span><br><span class="line"><span class="function"><span class="keyword">public</span> Callable&lt;BaseResponse&gt; <span class="title">callable</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    <span class="keyword">return</span> () -&gt; &#123;</span><br><span class="line">        Thread.sleep(<span class="number">1000</span>);</span><br><span class="line">        <span class="keyword">return</span> StandardResponse.make(<span class="string">"hello"</span>);</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@RequestMapping</span>(<span class="hljs-string">"/async"</span>)</span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> Callable&lt;BaseResponse&gt; <span class="hljs-title">callable</span><span class="hljs-params">()</span> </span>&#123;</span><br><span class="line">    <span class="hljs-keyword">return</span> () -&gt; &#123;</span><br><span class="line">        Thread.sleep(<span class="hljs-number">1000</span>);</span><br><span class="line">        <span class="hljs-keyword">return</span> StandardResponse.make(<span class="hljs-string">"hello"</span>);</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <h3 id="流水账开始……"><a href="#流水账开始……" class="headerlink" title="流水账开始……"></a>流水账开始……</h3><h3 id="第一次SocketProcessor"><a href="#第一次SocketProcessor" class="headerlink" title="第一次SocketProcessor"></a>第一次SocketProcessor</h3><p><img src="https://upload-images.jianshu.io/upload_images/1755236-df17876395cb5d04.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"><br>前面的流程和上文说的一样，Poller将SocketProcessor提交到tomcat线程池(由EndPoint持有)，然后socketProcessor被调度，执行其run方法，run方法调用doRun()。</p>
 <p>在我们的示例中，spring框架会根据返回值，进入异步servlet的处理流程，调用栈如下：</p>
-<figure class="highlight plain"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">startAsync:121, StandardServletAsyncWebRequest (org.springframework.web.context.request.async)</span><br><span class="line">startAsyncProcessing:466, WebAsyncManager (org.springframework.web.context.request.async)</span><br><span class="line">……</span><br><span class="line">handleReturnValue:51, CallableMethodReturnValueHandler (org.springframework.web.servlet.mvc.method.annotation)</span><br><span class="line">handleReturnValue:82, HandlerMethodReturnValueHandlerComposite (org.springframework.web.method.support)</span><br><span class="line">invokeAndHandle:119, ServletInvocableHandlerMethod (org.springframework.web.servlet.mvc.method.annotation)</span><br><span class="line">……</span><br><span class="line">doDispatch:1038, DispatcherServlet (org.springframework.web.servlet)</span><br><span class="line">doService:942, DispatcherServlet (org.springframework.web.servlet)</span><br><span class="line">……</span><br><span class="line">service:634, HttpServlet (javax.servlet.http)</span><br></pre></td></tr></table></figure>
+<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">startAsync:121, StandardServletAsyncWebRequest (org.springframework.web.context.request.async)</span><br><span class="line">startAsyncProcessing:466, WebAsyncManager (org.springframework.web.context.request.async)</span><br><span class="line">……</span><br><span class="line">handleReturnValue:51, CallableMethodReturnValueHandler (org.springframework.web.servlet.mvc.method.annotation)</span><br><span class="line">handleReturnValue:82, HandlerMethodReturnValueHandlerComposite (org.springframework.web.method.support)</span><br><span class="line">invokeAndHandle:119, ServletInvocableHandlerMethod (org.springframework.web.servlet.mvc.method.annotation)</span><br><span class="line">……</span><br><span class="line">doDispatch:1038, DispatcherServlet (org.springframework.web.servlet)</span><br><span class="line">doService:942, DispatcherServlet (org.springframework.web.servlet)</span><br><span class="line">……</span><br><span class="line">service:634, HttpServlet (javax.servlet.http)</span><br></pre></td></tr></table></figure>
 
 <p>StandardServletAsyncWebRequest的startAsync方法调用 HttpServletRequest.startAsync()：<br>在tomcat中，每个请求对应一个AsyncState， 由AsyncStateMachine提供状态转换管理。 此处调用startAsync以后，asyncState 由 DISPATCHED → STARTING</p>
 <p>返回到WebAsyncManager.startCallableProcessing 方法继续执行：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">startCallableProcessing</span><span class="params">(<span class="keyword">final</span> WebAsyncTask&lt;?&gt; webAsyncTask, Object... processingContext)</span></span></span><br><span class="line"><span class="function">      <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">   <span class="keyword">try</span> &#123;</span><br><span class="line">      Future&lt;?&gt; future = <span class="keyword">this</span>.taskExecutor.submit(() -&gt; &#123;</span><br><span class="line">         Object result = <span class="keyword">null</span>;</span><br><span class="line">         <span class="keyword">try</span> &#123;</span><br><span class="line">            interceptorChain.applyPreProcess(<span class="keyword">this</span>.asyncWebRequest, callable);</span><br><span class="line">            result = callable.call();</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="keyword">catch</span> (Throwable ex) &#123;</span><br><span class="line">            result = ex;</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="keyword">finally</span> &#123;</span><br><span class="line">            result = interceptorChain.applyPostProcess(<span class="keyword">this</span>.asyncWebRequest, callable, result);</span><br><span class="line">         &#125;</span><br><span class="line">         setConcurrentResultAndDispatch(result);</span><br><span class="line">      &#125;);</span><br><span class="line">      interceptorChain.setTaskFuture(future);</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="keyword">catch</span> (RejectedExecutionException ex) &#123;</span><br><span class="line">      Object result = interceptorChain.applyPostProcess(<span class="keyword">this</span>.asyncWebRequest, callable, ex);</span><br><span class="line">      setConcurrentResultAndDispatch(result);</span><br><span class="line">      <span class="keyword">throw</span> ex;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">startCallableProcessing</span><span class="hljs-params">(<span class="hljs-keyword">final</span> WebAsyncTask&lt;?&gt; webAsyncTask, Object... processingContext)</span></span></span><br><span class="line"><span class="hljs-function">      <span class="hljs-keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">   <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">      Future&lt;?&gt; future = <span class="hljs-keyword">this</span>.taskExecutor.submit(() -&gt; &#123;</span><br><span class="line">         Object result = <span class="hljs-keyword">null</span>;</span><br><span class="line">         <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">            interceptorChain.applyPreProcess(<span class="hljs-keyword">this</span>.asyncWebRequest, callable);</span><br><span class="line">            result = callable.call();</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="hljs-keyword">catch</span> (Throwable ex) &#123;</span><br><span class="line">            result = ex;</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="hljs-keyword">finally</span> &#123;</span><br><span class="line">            result = interceptorChain.applyPostProcess(<span class="hljs-keyword">this</span>.asyncWebRequest, callable, result);</span><br><span class="line">         &#125;</span><br><span class="line">         setConcurrentResultAndDispatch(result);</span><br><span class="line">      &#125;);</span><br><span class="line">      interceptorChain.setTaskFuture(future);</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="hljs-keyword">catch</span> (RejectedExecutionException ex) &#123;</span><br><span class="line">      Object result = interceptorChain.applyPostProcess(<span class="hljs-keyword">this</span>.asyncWebRequest, callable, ex);</span><br><span class="line">      setConcurrentResultAndDispatch(result);</span><br><span class="line">      <span class="hljs-keyword">throw</span> ex;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>此处用我们返回的Callable创建一个task，提交给executor进行执行。</p>
 <p>该task就相当于是我们的业务线程，业务部分执行结束后，setConcurrentResultAndDispatch函数调用asyncContext的dispatch函数，进行状态的更改和tomcat线程的重新提交：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">dispatch</span><span class="params">(ServletContext servletContext, String path)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">synchronized</span> (asyncContextLock) &#123;</span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">this</span>.dispatch = <span class="keyword">new</span> AsyncRunnable(</span><br><span class="line">                request, applicationDispatcher, servletRequest, servletResponse);</span><br><span class="line">        <span class="keyword">this</span>.request.getCoyoteRequest().action(ActionCode.ASYNC_DISPATCH, <span class="keyword">null</span>);</span><br><span class="line">        clearServletRequestResponse();</span><br><span class="line">        context.decrementInProgressAsyncCount();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatch</span><span class="hljs-params">(ServletContext servletContext, String path)</span> </span>&#123;</span><br><span class="line">    <span class="hljs-keyword">synchronized</span> (asyncContextLock) &#123;</span><br><span class="line">        ...</span><br><span class="line">        <span class="hljs-keyword">this</span>.dispatch = <span class="hljs-keyword">new</span> AsyncRunnable(</span><br><span class="line">                request, applicationDispatcher, servletRequest, servletResponse);</span><br><span class="line">        <span class="hljs-keyword">this</span>.request.getCoyoteRequest().action(ActionCode.ASYNC_DISPATCH, <span class="hljs-keyword">null</span>);</span><br><span class="line">        clearServletRequestResponse();</span><br><span class="line">        context.decrementInProgressAsyncCount();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>此处action(ActionCode.ASYNC_DISPATCH, null)调用将asyncState由 STARTED → DISPATCHING，并再次将socketProcessor提交给tomat线程池。（注意此处设置了一个AsyncRunnable方法，会提供给第二次进入线程池时做调用）</p>
 <p>回头继续看第一个线程，返回至AbstractProcessorLight后，调用AbstractProcessor.asyncPostProcess → AsyncStateMachine.asyncPostProcess, 状态由STARTING→ STARTED</p>
 <p>通过isAsync判断，判断当前正在进行异步处理，进入CoyoteAdapter的asyncDispatch方法：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">boolean</span> <span class="title">asyncDispatch</span><span class="params">(org.apache.coyote.Request req, org.apache.coyote.Response res,</span></span></span><br><span class="line"><span class="function"><span class="params">        SocketEvent status)</span> <span class="keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line"> </span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">if</span> (!request.isAsync()) &#123;</span><br><span class="line">            request.finishRequest();</span><br><span class="line">            response.finishResponse();</span><br><span class="line">        &#125;</span><br><span class="line"> </span><br><span class="line">        ...</span><br><span class="line">    &#125; <span class="keyword">catch</span> (...) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Override</span></span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">asyncDispatch</span><span class="hljs-params">(org.apache.coyote.Request req, org.apache.coyote.Response res,</span></span></span><br><span class="line"><span class="hljs-function"><span class="hljs-params">        SocketEvent status)</span> <span class="hljs-keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="hljs-keyword">try</span> &#123;</span><br><span class="line"> </span><br><span class="line">        ...</span><br><span class="line">        <span class="hljs-keyword">if</span> (!request.isAsync()) &#123;</span><br><span class="line">            request.finishRequest();</span><br><span class="line">            response.finishResponse();</span><br><span class="line">        &#125;</span><br><span class="line"> </span><br><span class="line">        ...</span><br><span class="line">    &#125; <span class="hljs-keyword">catch</span> (...) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>此处request.isAsync返回true，因此不结束响应</p>
 <p>注：存在一种可能性，即在第一次线程开始返回之前，我们的业务线程就已经做完工作，此时业务线程对dispatch的调用会将STARTING→ DISPATCH_PENDING，同时不会再往tomcat中丢一个新的线程。然后第一个线程返回时，在asbstracProcessorLight.process()中，将状态由DISPATCH_PENDING → DISPATCHING → DISPATCHED, 达到终态。<strong>也就是说，在没有必要的情况下（业务线程及时执行完成了），就不会进入tomcat线程池两次了。</strong></p>
 <h3 id="第二次SocketProcessor"><a href="#第二次SocketProcessor" class="headerlink" title="第二次SocketProcessor"></a>第二次SocketProcessor</h3><p>整体socketProcessor的调用时序还是和前文一致，返回至StandardWrapperValve中invoke函数时，进入asyncContextImpl的doInternalDispatch方法：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">protected</span> <span class="keyword">void</span> <span class="title">doInternalDispatch</span><span class="params">()</span> <span class="keyword">throws</span> ServletException, IOException </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">        logDebug(<span class="string">"intDispatch"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="keyword">try</span> &#123;</span><br><span class="line">        Runnable runnable = dispatch;</span><br><span class="line">        dispatch = <span class="keyword">null</span>;</span><br><span class="line">        runnable.run();</span><br><span class="line">        <span class="keyword">if</span> (!request.isAsync()) &#123;</span><br><span class="line">            fireOnComplete();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">catch</span> (RuntimeException x) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">doInternalDispatch</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> ServletException, IOException </span>&#123;</span><br><span class="line">    <span class="hljs-keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">        logDebug(<span class="hljs-string">"intDispatch"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">        Runnable runnable = dispatch;</span><br><span class="line">        dispatch = <span class="hljs-keyword">null</span>;</span><br><span class="line">        runnable.run();</span><br><span class="line">        <span class="hljs-keyword">if</span> (!request.isAsync()) &#123;</span><br><span class="line">            fireOnComplete();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="hljs-keyword">catch</span> (RuntimeException x) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>前文的futureTask设置的名为dispatch的AsyncRunnable在此被执行，在此方法中asyncState 由 DISPATCHING → DISPATCHED, 至此，该请求已达到终态，isAsync()返回为false。</p>
 <p>于是进入fireOnComplete函数，此函数会调用之前注册过的asyncListener的onComplete函数。</p>
 <p>…</p>
 <p>再次进入CoyoteAdapter的asyncDispatch方法，request.isAsync返回false，此时结束响应，客户端得到返回，后续tomcat进行一些对象清理的操作。</p>
 <h2 id="案例二"><a href="#案例二" class="headerlink" title="案例二"></a>案例二</h2><p>示例代码</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@WebServlet</span>(name = <span class="string">"simple"</span>, value = &#123;<span class="string">"/simple"</span>&#125;, asyncSupported = <span class="keyword">true</span>)</span><br><span class="line"><span class="keyword">public</span> <span class="class"><span class="keyword">class</span> <span class="title">SimpleAsyncServlet</span> <span class="keyword">extends</span> <span class="title">HttpServlet</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">    <span class="comment">/**</span></span><br><span class="line"><span class="comment">     * Simply spawn a new thread (from the app server's pool) for every</span></span><br><span class="line"><span class="comment">     * new async request. Will consume a lot more threads for many</span></span><br><span class="line"><span class="comment">     * concurrent requests.</span></span><br><span class="line"><span class="comment">     */</span></span><br><span class="line">    <span class="meta">@Override</span></span><br><span class="line">    <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">service</span><span class="params">(ServletRequest req, <span class="keyword">final</span> ServletResponse res)</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">        <span class="keyword">final</span> AsyncContext asyncContext = req.startAsync();</span><br><span class="line">        asyncContext.setTimeout(<span class="number">30000</span>);</span><br><span class="line">        asyncContext.addListener(<span class="keyword">new</span> AsyncListener() &#123;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onComplete</span><span class="params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="string">"onComplete called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onTimeout</span><span class="params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="string">"onTimeout called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onError</span><span class="params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="string">"onError called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="meta">@Override</span></span><br><span class="line">            <span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">onStartAsync</span><span class="params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="string">"onStartAsync called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"> </span><br><span class="line">        asyncContext.start(() -&gt; &#123;</span><br><span class="line">            <span class="keyword">try</span> &#123;</span><br><span class="line">                asyncContext.getResponse().getWriter().write(<span class="string">"hello"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                log(<span class="string">"Problem processing task"</span>, e);</span><br><span class="line">            &#125;</span><br><span class="line"> </span><br><span class="line">            asyncContext.complete();</span><br><span class="line">        &#125;);</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@WebServlet</span>(name = <span class="hljs-string">"simple"</span>, value = &#123;<span class="hljs-string">"/simple"</span>&#125;, asyncSupported = <span class="hljs-keyword">true</span>)</span><br><span class="line"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SimpleAsyncServlet</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">HttpServlet</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">    <span class="hljs-comment">/**</span></span><br><span class="line"><span class="hljs-comment">     * Simply spawn a new thread (from the app server's pool) for every</span></span><br><span class="line"><span class="hljs-comment">     * new async request. Will consume a lot more threads for many</span></span><br><span class="line"><span class="hljs-comment">     * concurrent requests.</span></span><br><span class="line"><span class="hljs-comment">     */</span></span><br><span class="line">    <span class="hljs-meta">@Override</span></span><br><span class="line">    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">service</span><span class="hljs-params">(ServletRequest req, <span class="hljs-keyword">final</span> ServletResponse res)</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">        <span class="hljs-keyword">final</span> AsyncContext asyncContext = req.startAsync();</span><br><span class="line">        asyncContext.setTimeout(<span class="hljs-number">30000</span>);</span><br><span class="line">        asyncContext.addListener(<span class="hljs-keyword">new</span> AsyncListener() &#123;</span><br><span class="line">            <span class="hljs-meta">@Override</span></span><br><span class="line">            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onComplete</span><span class="hljs-params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="hljs-string">"onComplete called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="hljs-meta">@Override</span></span><br><span class="line">            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onTimeout</span><span class="hljs-params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="hljs-string">"onTimeout called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="hljs-meta">@Override</span></span><br><span class="line">            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onError</span><span class="hljs-params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="hljs-string">"onError called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="hljs-meta">@Override</span></span><br><span class="line">            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onStartAsync</span><span class="hljs-params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="hljs-string">"onStartAsync called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"> </span><br><span class="line">        asyncContext.start(() -&gt; &#123;</span><br><span class="line">            <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">                asyncContext.getResponse().getWriter().write(<span class="hljs-string">"hello"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="hljs-keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                log(<span class="hljs-string">"Problem processing task"</span>, e);</span><br><span class="line">            &#125;</span><br><span class="line"> </span><br><span class="line">            asyncContext.complete();</span><br><span class="line">        &#125;);</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
 
 <p>这里，我们自己控制整个异步过程，包括异步状态的打开（request.startAsync），业务线程内最后对asyncContext.complete()的调用以确认异步状态的结束等。</p>
 <h3 id="第一次SocketProcessor-1"><a href="#第一次SocketProcessor-1" class="headerlink" title="第一次SocketProcessor"></a>第一次SocketProcessor</h3><p>前面的部分依然一样，然后根据path路由到了我们定义的SimpleAsyncServlet.service()中。在这里，我们通过request.startAsync打开异步处理状态，初始化AsyncContext， DISPATCHED → STARTING</p>
 <p>asyncContext.start()将传入的Runnable参数，扔到tomcat线程池启动，也就是说该业务线程仍然会占用tomcat的线程池（因此实际中我们推荐自己管理一个业务线程池，将业务线程提交到业务线程池中，而不使用asyncContext.start的方式）</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">synchronized</span> <span class="keyword">void</span> <span class="title">asyncRun</span><span class="params">(Runnable runnable)</span> </span>&#123;</span><br><span class="line">    <span class="keyword">if</span> (state == AsyncState.STARTING || state ==  AsyncState.STARTED ||</span><br><span class="line">            state == AsyncState.READ_WRITE_OP) &#123;</span><br><span class="line">        ...</span><br><span class="line">        <span class="keyword">try</span> &#123;</span><br><span class="line">            ...</span><br><span class="line">            processor.getExecutor().execute(runnable);</span><br><span class="line">        &#125; <span class="keyword">finally</span> &#123;</span><br><span class="line">            ...</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="keyword">else</span> &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">void</span> <span class="hljs-title">asyncRun</span><span class="hljs-params">(Runnable runnable)</span> </span>&#123;</span><br><span class="line">    <span class="hljs-keyword">if</span> (state == AsyncState.STARTING || state ==  AsyncState.STARTED ||</span><br><span class="line">            state == AsyncState.READ_WRITE_OP) &#123;</span><br><span class="line">        ...</span><br><span class="line">        <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">            ...</span><br><span class="line">            processor.getExecutor().execute(runnable);</span><br><span class="line">        &#125; <span class="hljs-keyword">finally</span> &#123;</span><br><span class="line">            ...</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="hljs-keyword">else</span> &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>然后后续在AbstractProcessorLight.process → AbstractProcessor.asyncPostProcess → AsyncStateMachine.asyncPostProcess, 这一段，将状态STARTING → STARTED</p>
 <p>业务线程得到调度并执行完毕后， 调用asyncContext.complete()：</p>
-<figure class="highlight java"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="meta">@Override</span></span><br><span class="line"><span class="function"><span class="keyword">public</span> <span class="keyword">void</span> <span class="title">complete</span><span class="params">()</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    request.getCoyoteRequest().action(ActionCode.ASYNC_COMPLETE, <span class="keyword">null</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
+<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Override</span></span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">complete</span><span class="hljs-params">()</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    request.getCoyoteRequest().action(ActionCode.ASYNC_COMPLETE, <span class="hljs-keyword">null</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
 <p>这里进入asyncStateMachine.asyncComplete()方法， STARTED → COMPLETING, 然后在tomcat中提交新线程</p>
 <p>注：同样地，在业务线程提前完成的情况下，asyncContext.complete → asyncStateMachine.asyncComplete()提前被调用， STARTING → COMPLETE_PENDING,  这种情况下不会再往tomcat线程池中提交新线程</p>
@@ -188,105 +262,678 @@
 <p>一般情况下，为了处理一个异步servlet，总共需要开启三次线程，两次是SocketProcessor，提交到tomcat线程池中；一次是业务线程，用于做异步操作。第一次SocketProcessor由一直在监听请求的Acceptor创建，第一个SocketProcessor线程启动业务线程，业务线程再回调第二个SocketProcessor；</p>
 <p>当业务线程执行提前完成时，第二个SocketProcessor就不会被提交了，所以是需要两个线程。</p>
 
-      
-    </div>
-    <footer class="article-footer">
-      <a data-url="https://github.com/TangTangWan/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/" data-id="cjzzpn2gr0000e9duioulnddk" class="article-share-link">Share</a>
-      
-      
-  <ul class="article-tag-list"><li class="article-tag-list-item"><a class="article-tag-list-link" href="/blogs/tags/Java/">Java</a></li><li class="article-tag-list-item"><a class="article-tag-list-link" href="/blogs/tags/Tomcat/">Tomcat</a></li></ul>
-
-    </footer>
-  </div>
-  
-    
-  
-</article>
-
-</section>
+        </div>
         
-          <aside id="sidebar">
-  
-    
-
-  
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">标签</h3>
-    <div class="widget">
-      <ul class="tag-list"><li class="tag-list-item"><a class="tag-list-link" href="/blogs/tags/Java/">Java</a></li><li class="tag-list-item"><a class="tag-list-link" href="/blogs/tags/Tomcat/">Tomcat</a></li></ul>
-    </div>
-  </div>
-
-
-  
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">标签云</h3>
-    <div class="widget tagcloud">
-      <a href="/blogs/tags/Java/" style="font-size: 10px;">Java</a> <a href="/blogs/tags/Tomcat/" style="font-size: 10px;">Tomcat</a>
-    </div>
-  </div>
-
-  
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">归档</h3>
-    <div class="widget">
-      <ul class="archive-list"><li class="archive-list-item"><a class="archive-list-link" href="/blogs/archives/2019/08/">八月 2019</a></li></ul>
-    </div>
-  </div>
-
-
-  
-    
-  <div class="widget-wrap">
-    <h3 class="widget-title">最新文章</h3>
-    <div class="widget">
-      <ul>
+        <div class="level is-size-7 is-uppercase">
+            <div class="level-start">
+                <div class="level-item">
+                    <span class="is-size-6 has-text-grey has-mr-7">#</span>
+                    <a class="has-link-grey -link" href="/blogs/tags/Java/">Java</a>, <a class="has-link-grey -link" href="/blogs/tags/Tomcat/">Tomcat</a>
+                </div>
+            </div>
+        </div>
         
-          <li>
-            <a href="/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/">异步Servlet规范与Tomcat实现原理</a>
-          </li>
         
-      </ul>
+        
     </div>
-  </div>
+</div>
 
-  
-</aside>
-        
-      </div>
-      <footer id="footer">
-  
-  <div class="outer">
-    <div id="footer-info" class="inner">
-      &copy; 2019 TangTangWan<br>
-      Powered by <a href="http://hexo.io/" target="_blank">Hexo</a>
+
+
+<div class="card">
+    <div class="card-content">
+        <h3 class="menu-label has-text-centered">喜欢这篇文章？打赏一下作者吧</h3>
+        <div class="buttons is-centered">
+            
+                
+<div class="notification is-danger">
+    You forgot to set the <code>qrcode</code> for Alipay. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+                
+<div class="notification is-danger">
+    You forgot to set the <code>qrcode</code> for Wechat. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+                <!-- Visit https://www.paypal.com/donate/buttons/ to get your donate button -->
+
+<div class="notification is-danger">
+    You forgot to set the <code>business</code> and <code>currency_code</code> for Paypal. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+                
+<div class="notification is-danger">
+    You forgot to set the <code>url</code> Patreon. Please set it in <code>_config.yml</code>.
+</div>
+
+                
+        </div>
     </div>
-  </div>
+</div>
+
+
+
+<div class="card card-transparent">
+    <div class="level post-navigation is-flex-wrap is-mobile">
+        
+        <div class="level-start">
+            <a class="level level-item has-link-grey  article-nav-prev" href="/blogs/2019/08/31/Disruptor介绍及原理讲解/">
+                <i class="level-item fas fa-chevron-left"></i>
+                <span class="level-item">Disruptor介绍及原理讲解</span>
+            </a>
+        </div>
+        
+        
+    </div>
+</div>
+
+
+</div>
+                
+
+
+
+
+<div class="column is-4-tablet is-4-desktop is-3-widescreen  has-order-1 column-left ">
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <nav class="level">
+            <div class="level-item has-text-centered" style="flex-shrink: 1">
+                <div>
+                    
+                        <img class="image is-128x128 has-mb-6" src="/blogs/images/avatar.png" alt="Your name">
+                    
+                    
+                    <p class="is-size-4 is-block">
+                        Your name
+                    </p>
+                    
+                    
+                    <p class="is-size-6 is-block">
+                        Your title
+                    </p>
+                    
+                    
+                    <p class="is-size-6 is-flex is-flex-center has-text-grey">
+                        <i class="fas fa-map-marker-alt has-mr-7"></i>
+                        <span>Your location</span>
+                    </p>
+                    
+                </div>
+            </div>
+        </nav>
+        <nav class="level is-mobile">
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        文章
+                    </p>
+                    <p class="title has-text-weight-normal">
+                        2
+                    </p>
+                </div>
+            </div>
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        分类
+                    </p>
+                    <p class="title has-text-weight-normal">
+                        0
+                    </p>
+                </div>
+            </div>
+            <div class="level-item has-text-centered is-marginless">
+                <div>
+                    <p class="heading">
+                        标签
+                    </p>
+                    <p class="title has-text-weight-normal">
+                        3
+                    </p>
+                </div>
+            </div>
+        </nav>
+        <div class="level">
+            <a class="level-item button is-link is-rounded" href="https://github.com/ppoffice" target="_blank">
+                关注我</a>
+        </div>
+        
+        
+        <div class="level is-mobile">
+            
+            <a class="level-item button is-white is-marginless" target="_blank"
+                title="Github" href="https://github.com/ppoffice">
+                
+                <i class="fab fa-github"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank"
+                title="Facebook" href="https://facebook.com">
+                
+                <i class="fab fa-facebook"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank"
+                title="Twitter" href="https://twitter.com">
+                
+                <i class="fab fa-twitter"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank"
+                title="Dribbble" href="https://dribbble.com">
+                
+                <i class="fab fa-dribbble"></i>
+                
+            </a>
+            
+            <a class="level-item button is-white is-marginless" target="_blank"
+                title="RSS" href="/blogs/">
+                
+                <i class="fas fa-rss"></i>
+                
+            </a>
+            
+        </div>
+        
+    </div>
+</div>
+    
+        
+    
+        
+
+<div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            链接
+        </h3>
+        <ul class="menu-list">
+        
+            <li>
+                <a class="level is-mobile" href="https://hexo.io" target="_blank">
+                    <span class="level-left">
+                        <span class="level-item">Hexo</span>
+                    </span>
+                    <span class="level-right">
+                        <span class="level-item tag">hexo.io</span>
+                    </span>
+                </a>
+            </li>
+        
+            <li>
+                <a class="level is-mobile" href="https://github.com/ppoffice" target="_blank">
+                    <span class="level-left">
+                        <span class="level-item">PPOffice</span>
+                    </span>
+                    <span class="level-right">
+                        <span class="level-item tag">github.com</span>
+                    </span>
+                </a>
+            </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
+
+
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                分类
+            </h3>
+            <ul class="menu-list">
+            
+            </ul>
+        </div>
+    </div>
+</div>
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <h3 class="menu-label">
+            标签云
+        </h3>
+        <a href="/blogs/tags/Java/" style="font-size: 10px;">Java</a> <a href="/blogs/tags/Java-高性能/" style="font-size: 10px;">Java, 高性能</a> <a href="/blogs/tags/Tomcat/" style="font-size: 10px;">Tomcat</a>
+    </div>
+</div>
+
+    
+    
+        <div class="column-right-shadow is-hidden-widescreen ">
+        
+            
+<div class="card widget">
+    <div class="card-content">
+        <h3 class="menu-label">
+            最新文章
+        </h3>
+        
+        <article class="media">
+            
+            <a href="/blogs/2019/08/31/Disruptor介绍及原理讲解/" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/blogs/images/thumbnail.svg" alt="Disruptor介绍及原理讲解">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2019-08-31T15:41:09.000Z">2019-08-31</time></div>
+                    <a href="/blogs/2019/08/31/Disruptor介绍及原理讲解/" class="title has-link-black-ter is-size-6 has-text-weight-normal">Disruptor介绍及原理讲解</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/blogs/images/thumbnail.svg" alt="异步Servlet规范与Tomcat实现原理">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2019-08-31T15:10:58.000Z">2019-08-31</time></div>
+                    <a href="/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/" class="title has-link-black-ter is-size-6 has-text-weight-normal">异步Servlet规范与Tomcat实现原理</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+    </div>
+</div>
+
+        
+            <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            归档
+        </h3>
+        <ul class="menu-list">
+        
+        <li>
+            <a class="level is-marginless" href="/blogs/archives/2019/08/">
+                <span class="level-start">
+                    <span class="level-item">八月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
+        
+            <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                标签
+            </h3>
+            <div class="field is-grouped is-grouped-multiline">
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/blogs/tags/Java/">
+                        <span class="tag">Java</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/blogs/tags/Java-高性能/">
+                        <span class="tag">Java, 高性能</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/blogs/tags/Tomcat/">
+                        <span class="tag">Tomcat</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+        
+        </div>
+    
+</div>
+
+                
+
+
+
+
+<div class="column is-4-tablet is-4-desktop is-3-widescreen is-hidden-touch is-hidden-desktop-only has-order-3 column-right ">
+    
+        
+<div class="card widget">
+    <div class="card-content">
+        <h3 class="menu-label">
+            最新文章
+        </h3>
+        
+        <article class="media">
+            
+            <a href="/blogs/2019/08/31/Disruptor介绍及原理讲解/" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/blogs/images/thumbnail.svg" alt="Disruptor介绍及原理讲解">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2019-08-31T15:41:09.000Z">2019-08-31</time></div>
+                    <a href="/blogs/2019/08/31/Disruptor介绍及原理讲解/" class="title has-link-black-ter is-size-6 has-text-weight-normal">Disruptor介绍及原理讲解</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+        <article class="media">
+            
+            <a href="/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/" class="media-left">
+                <p class="image is-64x64">
+                    <img class="thumbnail" src="/blogs/images/thumbnail.svg" alt="异步Servlet规范与Tomcat实现原理">
+                </p>
+            </a>
+            
+            <div class="media-content">
+                <div class="content">
+                    <div><time class="has-text-grey is-size-7 is-uppercase" datetime="2019-08-31T15:10:58.000Z">2019-08-31</time></div>
+                    <a href="/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/" class="title has-link-black-ter is-size-6 has-text-weight-normal">异步Servlet规范与Tomcat实现原理</a>
+                    <p class="is-size-7 is-uppercase">
+                        
+                    </p>
+                </div>
+            </div>
+        </article>
+        
+    </div>
+</div>
+
+    
+        <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+        <h3 class="menu-label">
+            归档
+        </h3>
+        <ul class="menu-list">
+        
+        <li>
+            <a class="level is-marginless" href="/blogs/archives/2019/08/">
+                <span class="level-start">
+                    <span class="level-item">八月 2019</span>
+                </span>
+                <span class="level-end">
+                    <span class="level-item tag">2</span>
+                </span>
+            </a>
+        </li>
+        
+        </ul>
+        </div>
+    </div>
+</div>
+    
+        <div class="card widget">
+    <div class="card-content">
+        <div class="menu">
+            <h3 class="menu-label">
+                标签
+            </h3>
+            <div class="field is-grouped is-grouped-multiline">
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/blogs/tags/Java/">
+                        <span class="tag">Java</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/blogs/tags/Java-高性能/">
+                        <span class="tag">Java, 高性能</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+                <div class="control">
+                    <a class="tags has-addons" href="/blogs/tags/Tomcat/">
+                        <span class="tag">Tomcat</span>
+                        <span class="tag is-grey">1</span>
+                    </a>
+                </div>
+                
+            </div>
+        </div>
+    </div>
+</div>
+    
+    
+</div>
+
+            </div>
+        </div>
+    </section>
+    <footer class="footer">
+    <div class="container">
+        <div class="level">
+            <div class="level-start has-text-centered-mobile">
+                <a class="footer-logo is-block has-mb-6" href="/blogs/">
+                
+                    <img src="/blogs/images/logo.svg" alt="异步Servlet规范与Tomcat实现原理" height="28">
+                
+                </a>
+                <p class="is-size-7">
+                &copy; 2019 TangTangWan&nbsp;
+                Powered by <a href="https://hexo.io/" target="_blank">Hexo</a> & <a
+                        href="https://github.com/ppoffice/hexo-theme-icarus" target="_blank">Icarus</a>
+                
+                </p>
+            </div>
+            <div class="level-end">
+            
+                <div class="field has-addons is-flex-center-mobile has-mt-5-mobile is-flex-wrap is-flex-middle">
+                
+                
+                <p class="control">
+                    <a class="button is-white is-large" target="_blank" title="Creative Commons" href="https://creativecommons.org/">
+                        
+                        <i class="fab fa-creative-commons"></i>
+                        
+                    </a>
+                </p>
+                
+                <p class="control">
+                    <a class="button is-white is-large" target="_blank" title="Attribution 4.0 International" href="https://creativecommons.org/licenses/by/4.0/">
+                        
+                        <i class="fab fa-creative-commons-by"></i>
+                        
+                    </a>
+                </p>
+                
+                <p class="control">
+                    <a class="button is-white is-large" target="_blank" title="Download on GitHub" href="https://github.com/ppoffice/hexo-theme-icarus">
+                        
+                        <i class="fab fa-github"></i>
+                        
+                    </a>
+                </p>
+                
+                </div>
+            
+            </div>
+        </div>
+    </div>
 </footer>
-    </div>
-    <nav id="mobile-nav">
-  
-    <a href="/blogs/" class="mobile-nav-link">Home</a>
-  
-    <a href="/blogs/archives" class="mobile-nav-link">Archives</a>
-  
-</nav>
+    <script src="https://cdn.jsdelivr.net/npm/jquery@3.3.1/dist/jquery.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/moment@2.22.2/min/moment-with-locales.min.js"></script>
+<script>moment.locale("zh-CN");</script>
+
+<script>
+var IcarusThemeSettings = {
+    article: {
+        highlight: {
+            clipboard: true,
+            fold: 'unfolded'
+        }
+    }
+};
+</script>
+
+
+    <script src="https://cdn.jsdelivr.net/npm/clipboard@2.0.4/dist/clipboard.min.js" defer></script>
+
+
+
+    
+    
+    
+    <script src="/blogs/js/animation.js"></script>
     
 
-<script src="//ajax.googleapis.com/ajax/libs/jquery/2.0.3/jquery.min.js"></script>
+    
+    
+    
+    <script src="https://cdn.jsdelivr.net/npm/lightgallery@1.6.8/dist/js/lightgallery.min.js" defer></script>
+    <script src="https://cdn.jsdelivr.net/npm/justifiedGallery@3.7.0/dist/js/jquery.justifiedGallery.min.js" defer></script>
+    <script src="/blogs/js/gallery.js" defer></script>
+    
+
+    
+    
+
+<div id="outdated">
+    <h6>Your browser is out-of-date!</h6>
+    <p>Update your browser to view this website correctly. <a id="btnUpdateBrowser" href="http://outdatedbrowser.com/">Update
+            my browser now </a></p>
+    <p class="last"><a href="#" id="btnCloseUpdateBrowser" title="Close">&times;</a></p>
+</div>
+<script src="https://cdn.jsdelivr.net/npm/outdatedbrowser@1.1.5/outdatedbrowser/outdatedbrowser.min.js" defer></script>
+<script>
+    document.addEventListener("DOMContentLoaded", function () {
+        outdatedBrowser({
+            bgColor: '#f25648',
+            color: '#ffffff',
+            lowerThan: 'flex'
+        });
+    });
+</script>
 
 
-  <link rel="stylesheet" href="/blogs/fancybox/jquery.fancybox.css">
-  <script src="/blogs/fancybox/jquery.fancybox.pack.js"></script>
+    
+    
+<script src="https://cdn.jsdelivr.net/npm/mathjax@2.7.5/unpacked/MathJax.js?config=TeX-MML-AM_CHTML" defer></script>
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    MathJax.Hub.Config({
+        'HTML-CSS': {
+            matchFontHeight: false
+        },
+        SVG: {
+            matchFontHeight: false
+        },
+        CommonHTML: {
+            matchFontHeight: false
+        },
+        tex2jax: {
+            inlineMath: [
+                ['$','$'],
+                ['\\(','\\)']
+            ]
+        }
+    });
+});
+</script>
+
+    
+    
+
+<a id="back-to-top" title="回到顶端" href="javascript:;">
+    <i class="fas fa-chevron-up"></i>
+</a>
+<script src="/blogs/js/back-to-top.js" defer></script>
 
 
-<script src="/blogs/js/script.js"></script>
+    
+    
+
+    
+    
+    
+    
+
+    
+    
+    
+    
+    
 
 
+<script src="/blogs/js/main.js" defer></script>
 
-  </div>
+    
+    <div class="searchbox ins-search">
+    <div class="searchbox-container ins-search-container">
+        <div class="searchbox-input-wrapper">
+            <input type="text" class="searchbox-input ins-search-input" placeholder="想要查找什么..." />
+            <span class="searchbox-close ins-close ins-selectable"><i class="fa fa-times-circle"></i></span>
+        </div>
+        <div class="searchbox-result-wrapper ins-section-wrapper">
+            <div class="ins-section-container"></div>
+        </div>
+    </div>
+</div>
+<script>
+    (function (window) {
+        var INSIGHT_CONFIG = {
+            TRANSLATION: {
+                POSTS: '文章',
+                PAGES: '页面',
+                CATEGORIES: '分类',
+                TAGS: '标签',
+                UNTITLED: '(无标题)',
+            },
+            CONTENT_URL: '/blogs/content.json',
+        };
+        window.INSIGHT_CONFIG = INSIGHT_CONFIG;
+    })(window);
+</script>
+<script src="/blogs/js/insight.js" defer></script>
+<link rel="stylesheet" href="/blogs/css/search.css">
+<link rel="stylesheet" href="/blogs/css/insight.css">
+    
 </body>
 </html>
