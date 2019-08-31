@@ -5,15 +5,27 @@
   
 
   
-  <title>Hexo</title>
+  <title>异步Servlet规范与Tomcat实现原理 | Hexo</title>
   <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
-  <meta property="og:type" content="website">
-<meta property="og:title" content="Hexo">
-<meta property="og:url" content="https://github.com/TangTangWan/blogs/index.html">
+  <meta name="description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。 异步Servlet的Why &amp;amp; What有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是">
+<meta name="keywords" content="Java, Tomcat">
+<meta property="og:type" content="article">
+<meta property="og:title" content="异步Servlet规范与Tomcat实现原理">
+<meta property="og:url" content="https://github.com/TangTangWan/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/index.html">
 <meta property="og:site_name" content="Hexo">
+<meta property="og:description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。 异步Servlet的Why &amp;amp; What有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是">
 <meta property="og:locale" content="en">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-ce1f41b7e03d17bd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-a0967ef2e03cc7eb.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-a4bbcf993621f610.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-340e0316d57ab847.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-b18605c364cd41a1.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+<meta property="og:image" content="https://upload-images.jianshu.io/upload_images/1755236-df17876395cb5d04.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
+<meta property="og:updated_time" content="2019-08-31T15:12:53.042Z">
 <meta name="twitter:card" content="summary">
-<meta name="twitter:title" content="Hexo">
+<meta name="twitter:title" content="异步Servlet规范与Tomcat实现原理">
+<meta name="twitter:description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。 异步Servlet的Why &amp;amp; What有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是">
+<meta name="twitter:image" content="https://upload-images.jianshu.io/upload_images/1755236-ce1f41b7e03d17bd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240">
   
     <link rel="alternate" href="/blogs/atom.xml" title="Hexo" type="application/atom+xml">
   
@@ -60,9 +72,7 @@
   </div>
 </header>
       <div class="outer">
-        <section id="main">
-  
-    <article id="post-异步Servlet规范与Tomcat实现原理" class="article article-type-post" itemscope itemprop="blogPost">
+        <section id="main"><article id="post-异步Servlet规范与Tomcat实现原理" class="article article-type-post" itemscope itemprop="blogPost">
   <div class="article-meta">
     <a href="/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/" class="article-date">
   <time datetime="2019-08-31T15:10:58.000Z" itemprop="datePublished">2019-08-31</time>
@@ -75,8 +85,8 @@
       <header class="article-header">
         
   
-    <h1 itemprop="name">
-      <a class="article-title" href="/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/">异步Servlet规范与Tomcat实现原理</a>
+    <h1 class="article-title" itemprop="name">
+      异步Servlet规范与Tomcat实现原理
     </h1>
   
 
@@ -189,11 +199,9 @@
     </footer>
   </div>
   
-</article>
-
-
+    
   
-
+</article>
 
 </section>
         
