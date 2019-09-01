@@ -162,7 +162,7 @@
                 <span class="level-item has-text-grey">
                     
                     
-                    23 分钟 读完 (大约 3524 个字)
+                    24 分钟 读完 (大约 3525 个字)
                 </span>
                 
                 
@@ -176,101 +176,16 @@
         </h1>
         <div class="content">
             <p>本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。</p>
-<h2 id="异步Servlet的Why-amp-What"><a href="#异步Servlet的Why-amp-What" class="headerlink" title="异步Servlet的Why &amp; What"></a>异步Servlet的Why &amp; What</h2><p>有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是一个低效的操作，因为这是阻塞操作，从而白白占用一个 线程或其他一些受限资源。</p>
-<p>Servlet 3.0 引入了异步处理请求的能力，使线程可以返回到容器，从而执行更多的任务。一个典型的异步处理事件顺序是:</p>
-<ol>
-<li>请求被接收到，通过一系列如用于验证的等标准的 filter 之后被传递到 Servlet。</li>
-</ol>
-<p>2. servlet 处理请求参数及(或)内容体从而确定请求的类型。</p>
-<ol start="3">
-<li>该 servlet 发出请求去获取一些资源或数据，例如，发送一个远程 web 服务请求或加入一个等待 JDBC 连 接的队列。</li>
-</ol>
-<p>4. servlet 不产生响应并返回。</p>
-<ol start="5">
-<li>过了一段时间后，所请求的资源变为可用，此时处理线程继续处理事件，要么在同一个线程，要么通过AsyncContext 分派到容器中的一个资源上。</li>
-</ol>
-<h2 id="Tomcat如何处理连接及对接servlet"><a href="#Tomcat如何处理连接及对接servlet" class="headerlink" title="Tomcat如何处理连接及对接servlet"></a>Tomcat如何处理连接及对接servlet</h2><p>先说非异步的servlet线程池，异步servlet在此基础上进一步扩展。</p>
-<h3 id="EndPoint"><a href="#EndPoint" class="headerlink" title="EndPoint"></a>EndPoint</h3><p><code>EndPoint</code>用于处理具体连接和传输数据，即用来实现网络连接和控制，它是服务器对外<code>I/O</code>操作的接入点。主要任务是管理对外的<code>socket</code>连接，同时将建立好的<code>socket</code>连接交到合适的工作线程中去。 里面两个主要的属性类是<code>Acceptor</code>和<code>Poller</code>、<code>SocketProcessor</code>。 我们以<code>NioEndpoint</code>为例，其内部请求处理具体的流程如下:<br><img src="https://upload-images.jianshu.io/upload_images/1755236-ce1f41b7e03d17bd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="img"><br>展开时序图<br><img src="https://upload-images.jianshu.io/upload_images/1755236-a0967ef2e03cc7eb.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"></p>
-<h3 id="Acceptor和Poller"><a href="#Acceptor和Poller" class="headerlink" title="Acceptor和Poller"></a>Acceptor和Poller</h3><p>Acceptor和Poller都是实现了Runnable接口的类，在tomcat启动时，它们也作为线程start起来。</p>
-<p>Acceptor接受到请求，用接收到的连接构造NioChannel对象，用该channel对象构造出PollerEvent，添加进Poller中</p>
-<p>Poller的run函数，将注册的events逐个处理，将event对应的channel注册到某个Selector中(利用IO复用，进行读取)。selector.select()后，根据读取的SelectionKey，构造socketProcessor(实现了Runnable)，提交到tomcat线程池。<br><img src="https://upload-images.jianshu.io/upload_images/1755236-a4bbcf993621f610.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"><br>而tomcat线程池中的socketProcessor被调度到后，经过一系列handler, processor的处理之后(验证\http协议解析等)，最后对接到了HttpServlet上（对应tomcat-embed-core-8.5.43版本）:<br><img src="https://upload-images.jianshu.io/upload_images/1755236-340e0316d57ab847.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"><br>网上版本：<br><img src="https://upload-images.jianshu.io/upload_images/1755236-b18605c364cd41a1.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"></p>
-<h2 id="异步Servlet规范概要-以Servlet3-1规范为准"><a href="#异步Servlet规范概要-以Servlet3-1规范为准" class="headerlink" title="异步Servlet规范概要(以Servlet3.1规范为准)"></a>异步Servlet规范概要(以Servlet3.1规范为准)</h2><p>Servlet3.0开始，添加了一些方法/类以支持异步处理，这里列出一些比较关键的部分。</p>
-<p>ServletRequest</p>
-<ul>
-<li>public AsyncContext startAsync(ServletRequest req, ServletResponse res)。这个方法的作用将请求转换为异步模式，并使用给定的请求及响应对象和 getAsyncTimeout 返回的超时时间初始化它的 AsyncContext。  </li>
-</ul>
-<p>AsyncContext</p>
-<ul>
-<li>public void addListener(AsyncListener listener, ServletRequest req, ServletResponse res) 。当超时/完成/出错会回调这里面的方法, 包含onTimeout, onError, onComplete 或 onStartAsync.</li>
-</ul>
-<ul>
-<li><p>public void dispatch(ServletContext context, String path)</p>
-</li>
-<li><p>public void dispatch()</p>
-</li>
-<li><p>public void dispatch(String path)<br>以上为dispatch函数的三个变体，调用这些方法且将请求和响应对象传入到容器的一个托管线程后将立即返回，在托管线程中异步操作将被执行。请求的分派器类型设置为异步(ASYNC)。 控制委托给分派目标的请求和响应，除非调用了ServletRequest.startAsync() 或 ServletRequest.startAsync(ServletRequest, ServletResponse)，否则响应将在分派目标执行完成时被关闭。AsyncListener.onComplete(AsyncEvent), AsyncListener.onTimeout(AsyncEvent)和 AsyncListener.onError(AsyncEvent)的调用将被延迟到容器启动 的分派返回到容器之后。</p>
-</li>
-<li><p>public void complete() 。如果调用了 request.startAsync，则必须调用该方法以完成异步处理并提交和关闭响应。如果请求分派到一个不支持异步操作的 Servlet，或者由 AsyncContext.dispatch 调用的目标servlet 之后没有调用 startAsync，则 complete 方法会由容器调用。这种情况下，容器负责当 servlet 的 service 方法一退出就调用 complete()。 如果 startAsync 没有被调用则必须抛出 IllegalStateException。 在调用 ServletRequest.startAsync() 或 ServletRequest.startAsync(ServletRequest, ServletResponse) 之后且 在调用任意 dispatch 方法之前的任意时刻调用 complete()是合法的。</p>
-</li>
-</ul>
-<p>在tomcat中，dispatch和complete的具体实现与servlet规范有较大出入</p>
-<ol>
-<li>规范中提到“调用这些方法且将请求和响应对象传入到容器的一个托管线程后将立即返回，在托管线程中异步操作将被执行。” 在tomcat中，dispatch函数实际上在异步操作完成后才会被执行，dispatch会托管一个线程给tomcat容器，该线程负责收尾工作。</li>
-<li>规范中提到“如果调用了 request.startAsync，则必须调用该方法以完成异步处理并提交和关闭响应。如果请求分派到一个不支持异步操作的 Servlet，或者由 AsyncContext.dispatch 调用的目标servlet 之后没有调用 startAsync，则 complete 方法会由容器调用。这种情况下，容器负责当 servlet 的 service 方法一退出就调用 complete()。”。 在tomcat中，complete函数仅由业务实现者调用，如果业务实现者未调用，容器也不会负责调用。实际上，在这种情况下，本应由complete函数完成的收尾工作，实际是由dispatch函数完成的。（？？？？？？）</li>
-</ol>
-<h2 id="异步servlet与Tomcat线程池"><a href="#异步servlet与Tomcat线程池" class="headerlink" title="异步servlet与Tomcat线程池"></a>异步servlet与Tomcat线程池</h2><p>最基础的架子和之前说的非异步的servlet一样，只是每次请求都会进入tomcat线程池至少两次。</p>
-<p>第一次进入tomcat线程池后，servlet的service方法执行完毕，从CoyoteAdapter返回时，此时根据状态机的状态判断是异步的，不会结束响应，但相应的tomcat线程会被释放。业务线程此时继续执行任务，直到通过AsyncContext.dispatch或者.complete()回调，该回调会将SocketProcessor再次注册到tomcat线程池中，相当于重新开启一个工作线程。而这一遍的流程，因为Servlet已经处理过，所以会略过servlet的执行，直接将后续处理走完，包括对response的收尾，对象的清空等等。以下以spring-boot的tomcat-embed 8.5.43版本为例，具体展开讲讲。</p>
-<h2 id="案例一"><a href="#案例一" class="headerlink" title="案例一"></a>案例一</h2><p>我们的示例代码：</p>
-<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@RequestMapping</span>(<span class="hljs-string">"/async"</span>)</span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> Callable&lt;BaseResponse&gt; <span class="hljs-title">callable</span><span class="hljs-params">()</span> </span>&#123;</span><br><span class="line">    <span class="hljs-keyword">return</span> () -&gt; &#123;</span><br><span class="line">        Thread.sleep(<span class="hljs-number">1000</span>);</span><br><span class="line">        <span class="hljs-keyword">return</span> StandardResponse.make(<span class="hljs-string">"hello"</span>);</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<h3 id="流水账开始……"><a href="#流水账开始……" class="headerlink" title="流水账开始……"></a>流水账开始……</h3><h3 id="第一次SocketProcessor"><a href="#第一次SocketProcessor" class="headerlink" title="第一次SocketProcessor"></a>第一次SocketProcessor</h3><p><img src="https://upload-images.jianshu.io/upload_images/1755236-df17876395cb5d04.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"><br>前面的流程和上文说的一样，Poller将SocketProcessor提交到tomcat线程池(由EndPoint持有)，然后socketProcessor被调度，执行其run方法，run方法调用doRun()。</p>
-<p>在我们的示例中，spring框架会根据返回值，进入异步servlet的处理流程，调用栈如下：</p>
-<figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">startAsync:121, StandardServletAsyncWebRequest (org.springframework.web.context.request.async)</span><br><span class="line">startAsyncProcessing:466, WebAsyncManager (org.springframework.web.context.request.async)</span><br><span class="line">……</span><br><span class="line">handleReturnValue:51, CallableMethodReturnValueHandler (org.springframework.web.servlet.mvc.method.annotation)</span><br><span class="line">handleReturnValue:82, HandlerMethodReturnValueHandlerComposite (org.springframework.web.method.support)</span><br><span class="line">invokeAndHandle:119, ServletInvocableHandlerMethod (org.springframework.web.servlet.mvc.method.annotation)</span><br><span class="line">……</span><br><span class="line">doDispatch:1038, DispatcherServlet (org.springframework.web.servlet)</span><br><span class="line">doService:942, DispatcherServlet (org.springframework.web.servlet)</span><br><span class="line">……</span><br><span class="line">service:634, HttpServlet (javax.servlet.http)</span><br></pre></td></tr></table></figure>
-
-<p>StandardServletAsyncWebRequest的startAsync方法调用 HttpServletRequest.startAsync()：<br>在tomcat中，每个请求对应一个AsyncState， 由AsyncStateMachine提供状态转换管理。 此处调用startAsync以后，asyncState 由 DISPATCHED → STARTING</p>
-<p>返回到WebAsyncManager.startCallableProcessing 方法继续执行：</p>
-<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">startCallableProcessing</span><span class="hljs-params">(<span class="hljs-keyword">final</span> WebAsyncTask&lt;?&gt; webAsyncTask, Object... processingContext)</span></span></span><br><span class="line"><span class="hljs-function">      <span class="hljs-keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">   <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">      Future&lt;?&gt; future = <span class="hljs-keyword">this</span>.taskExecutor.submit(() -&gt; &#123;</span><br><span class="line">         Object result = <span class="hljs-keyword">null</span>;</span><br><span class="line">         <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">            interceptorChain.applyPreProcess(<span class="hljs-keyword">this</span>.asyncWebRequest, callable);</span><br><span class="line">            result = callable.call();</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="hljs-keyword">catch</span> (Throwable ex) &#123;</span><br><span class="line">            result = ex;</span><br><span class="line">         &#125;</span><br><span class="line">         <span class="hljs-keyword">finally</span> &#123;</span><br><span class="line">            result = interceptorChain.applyPostProcess(<span class="hljs-keyword">this</span>.asyncWebRequest, callable, result);</span><br><span class="line">         &#125;</span><br><span class="line">         setConcurrentResultAndDispatch(result);</span><br><span class="line">      &#125;);</span><br><span class="line">      interceptorChain.setTaskFuture(future);</span><br><span class="line">   &#125;</span><br><span class="line">   <span class="hljs-keyword">catch</span> (RejectedExecutionException ex) &#123;</span><br><span class="line">      Object result = interceptorChain.applyPostProcess(<span class="hljs-keyword">this</span>.asyncWebRequest, callable, ex);</span><br><span class="line">      setConcurrentResultAndDispatch(result);</span><br><span class="line">      <span class="hljs-keyword">throw</span> ex;</span><br><span class="line">   &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>此处用我们返回的Callable创建一个task，提交给executor进行执行。</p>
-<p>该task就相当于是我们的业务线程，业务部分执行结束后，setConcurrentResultAndDispatch函数调用asyncContext的dispatch函数，进行状态的更改和tomcat线程的重新提交：</p>
-<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">dispatch</span><span class="hljs-params">(ServletContext servletContext, String path)</span> </span>&#123;</span><br><span class="line">    <span class="hljs-keyword">synchronized</span> (asyncContextLock) &#123;</span><br><span class="line">        ...</span><br><span class="line">        <span class="hljs-keyword">this</span>.dispatch = <span class="hljs-keyword">new</span> AsyncRunnable(</span><br><span class="line">                request, applicationDispatcher, servletRequest, servletResponse);</span><br><span class="line">        <span class="hljs-keyword">this</span>.request.getCoyoteRequest().action(ActionCode.ASYNC_DISPATCH, <span class="hljs-keyword">null</span>);</span><br><span class="line">        clearServletRequestResponse();</span><br><span class="line">        context.decrementInProgressAsyncCount();</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>此处action(ActionCode.ASYNC_DISPATCH, null)调用将asyncState由 STARTED → DISPATCHING，并再次将socketProcessor提交给tomat线程池。（注意此处设置了一个AsyncRunnable方法，会提供给第二次进入线程池时做调用）</p>
-<p>回头继续看第一个线程，返回至AbstractProcessorLight后，调用AbstractProcessor.asyncPostProcess → AsyncStateMachine.asyncPostProcess, 状态由STARTING→ STARTED</p>
-<p>通过isAsync判断，判断当前正在进行异步处理，进入CoyoteAdapter的asyncDispatch方法：</p>
-<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Override</span></span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">boolean</span> <span class="hljs-title">asyncDispatch</span><span class="hljs-params">(org.apache.coyote.Request req, org.apache.coyote.Response res,</span></span></span><br><span class="line"><span class="hljs-function"><span class="hljs-params">        SocketEvent status)</span> <span class="hljs-keyword">throws</span> Exception </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    <span class="hljs-keyword">try</span> &#123;</span><br><span class="line"> </span><br><span class="line">        ...</span><br><span class="line">        <span class="hljs-keyword">if</span> (!request.isAsync()) &#123;</span><br><span class="line">            request.finishRequest();</span><br><span class="line">            response.finishResponse();</span><br><span class="line">        &#125;</span><br><span class="line"> </span><br><span class="line">        ...</span><br><span class="line">    &#125; <span class="hljs-keyword">catch</span> (...) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>此处request.isAsync返回true，因此不结束响应</p>
-<p>注：存在一种可能性，即在第一次线程开始返回之前，我们的业务线程就已经做完工作，此时业务线程对dispatch的调用会将STARTING→ DISPATCH_PENDING，同时不会再往tomcat中丢一个新的线程。然后第一个线程返回时，在asbstracProcessorLight.process()中，将状态由DISPATCH_PENDING → DISPATCHING → DISPATCHED, 达到终态。<strong>也就是说，在没有必要的情况下（业务线程及时执行完成了），就不会进入tomcat线程池两次了。</strong></p>
-<h3 id="第二次SocketProcessor"><a href="#第二次SocketProcessor" class="headerlink" title="第二次SocketProcessor"></a>第二次SocketProcessor</h3><p>整体socketProcessor的调用时序还是和前文一致，返回至StandardWrapperValve中invoke函数时，进入asyncContextImpl的doInternalDispatch方法：</p>
-<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">protected</span> <span class="hljs-keyword">void</span> <span class="hljs-title">doInternalDispatch</span><span class="hljs-params">()</span> <span class="hljs-keyword">throws</span> ServletException, IOException </span>&#123;</span><br><span class="line">    <span class="hljs-keyword">if</span> (log.isDebugEnabled()) &#123;</span><br><span class="line">        logDebug(<span class="hljs-string">"intDispatch"</span>);</span><br><span class="line">    &#125;</span><br><span class="line">    <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">        Runnable runnable = dispatch;</span><br><span class="line">        dispatch = <span class="hljs-keyword">null</span>;</span><br><span class="line">        runnable.run();</span><br><span class="line">        <span class="hljs-keyword">if</span> (!request.isAsync()) &#123;</span><br><span class="line">            fireOnComplete();</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="hljs-keyword">catch</span> (RuntimeException x) &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>前文的futureTask设置的名为dispatch的AsyncRunnable在此被执行，在此方法中asyncState 由 DISPATCHING → DISPATCHED, 至此，该请求已达到终态，isAsync()返回为false。</p>
-<p>于是进入fireOnComplete函数，此函数会调用之前注册过的asyncListener的onComplete函数。</p>
-<p>…</p>
-<p>再次进入CoyoteAdapter的asyncDispatch方法，request.isAsync返回false，此时结束响应，客户端得到返回，后续tomcat进行一些对象清理的操作。</p>
-<h2 id="案例二"><a href="#案例二" class="headerlink" title="案例二"></a>案例二</h2><p>示例代码</p>
-<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br><span class="line">15</span><br><span class="line">16</span><br><span class="line">17</span><br><span class="line">18</span><br><span class="line">19</span><br><span class="line">20</span><br><span class="line">21</span><br><span class="line">22</span><br><span class="line">23</span><br><span class="line">24</span><br><span class="line">25</span><br><span class="line">26</span><br><span class="line">27</span><br><span class="line">28</span><br><span class="line">29</span><br><span class="line">30</span><br><span class="line">31</span><br><span class="line">32</span><br><span class="line">33</span><br><span class="line">34</span><br><span class="line">35</span><br><span class="line">36</span><br><span class="line">37</span><br><span class="line">38</span><br><span class="line">39</span><br><span class="line">40</span><br><span class="line">41</span><br><span class="line">42</span><br><span class="line">43</span><br><span class="line">44</span><br><span class="line">45</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@WebServlet</span>(name = <span class="hljs-string">"simple"</span>, value = &#123;<span class="hljs-string">"/simple"</span>&#125;, asyncSupported = <span class="hljs-keyword">true</span>)</span><br><span class="line"><span class="hljs-keyword">public</span> <span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">SimpleAsyncServlet</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">HttpServlet</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">    <span class="hljs-comment">/**</span></span><br><span class="line"><span class="hljs-comment">     * Simply spawn a new thread (from the app server's pool) for every</span></span><br><span class="line"><span class="hljs-comment">     * new async request. Will consume a lot more threads for many</span></span><br><span class="line"><span class="hljs-comment">     * concurrent requests.</span></span><br><span class="line"><span class="hljs-comment">     */</span></span><br><span class="line">    <span class="hljs-meta">@Override</span></span><br><span class="line">    <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">service</span><span class="hljs-params">(ServletRequest req, <span class="hljs-keyword">final</span> ServletResponse res)</span> </span>&#123;</span><br><span class="line"> </span><br><span class="line">        <span class="hljs-keyword">final</span> AsyncContext asyncContext = req.startAsync();</span><br><span class="line">        asyncContext.setTimeout(<span class="hljs-number">30000</span>);</span><br><span class="line">        asyncContext.addListener(<span class="hljs-keyword">new</span> AsyncListener() &#123;</span><br><span class="line">            <span class="hljs-meta">@Override</span></span><br><span class="line">            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onComplete</span><span class="hljs-params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="hljs-string">"onComplete called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="hljs-meta">@Override</span></span><br><span class="line">            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onTimeout</span><span class="hljs-params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="hljs-string">"onTimeout called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="hljs-meta">@Override</span></span><br><span class="line">            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onError</span><span class="hljs-params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="hljs-string">"onError called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="hljs-meta">@Override</span></span><br><span class="line">            <span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">onStartAsync</span><span class="hljs-params">(AsyncEvent event)</span> </span>&#123;</span><br><span class="line">                log(<span class="hljs-string">"onStartAsync called"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">        &#125;);</span><br><span class="line"> </span><br><span class="line">        asyncContext.start(() -&gt; &#123;</span><br><span class="line">            <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">                asyncContext.getResponse().getWriter().write(<span class="hljs-string">"hello"</span>);</span><br><span class="line">            &#125;</span><br><span class="line">            <span class="hljs-keyword">catch</span> (IOException e) &#123;</span><br><span class="line">                log(<span class="hljs-string">"Problem processing task"</span>, e);</span><br><span class="line">            &#125;</span><br><span class="line"> </span><br><span class="line">            asyncContext.complete();</span><br><span class="line">        &#125;);</span><br><span class="line"> </span><br><span class="line"> </span><br><span class="line">    &#125;</span><br></pre></td></tr></table></figure>
-
-<p>这里，我们自己控制整个异步过程，包括异步状态的打开（request.startAsync），业务线程内最后对asyncContext.complete()的调用以确认异步状态的结束等。</p>
-<h3 id="第一次SocketProcessor-1"><a href="#第一次SocketProcessor-1" class="headerlink" title="第一次SocketProcessor"></a>第一次SocketProcessor</h3><p>前面的部分依然一样，然后根据path路由到了我们定义的SimpleAsyncServlet.service()中。在这里，我们通过request.startAsync打开异步处理状态，初始化AsyncContext， DISPATCHED → STARTING</p>
-<p>asyncContext.start()将传入的Runnable参数，扔到tomcat线程池启动，也就是说该业务线程仍然会占用tomcat的线程池（因此实际中我们推荐自己管理一个业务线程池，将业务线程提交到业务线程池中，而不使用asyncContext.start的方式）</p>
-<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">synchronized</span> <span class="hljs-keyword">void</span> <span class="hljs-title">asyncRun</span><span class="hljs-params">(Runnable runnable)</span> </span>&#123;</span><br><span class="line">    <span class="hljs-keyword">if</span> (state == AsyncState.STARTING || state ==  AsyncState.STARTED ||</span><br><span class="line">            state == AsyncState.READ_WRITE_OP) &#123;</span><br><span class="line">        ...</span><br><span class="line">        <span class="hljs-keyword">try</span> &#123;</span><br><span class="line">            ...</span><br><span class="line">            processor.getExecutor().execute(runnable);</span><br><span class="line">        &#125; <span class="hljs-keyword">finally</span> &#123;</span><br><span class="line">            ...</span><br><span class="line">        &#125;</span><br><span class="line">    &#125; <span class="hljs-keyword">else</span> &#123;</span><br><span class="line">        ...</span><br><span class="line">    &#125;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>然后后续在AbstractProcessorLight.process → AbstractProcessor.asyncPostProcess → AsyncStateMachine.asyncPostProcess, 这一段，将状态STARTING → STARTED</p>
-<p>业务线程得到调度并执行完毕后， 调用asyncContext.complete()：</p>
-<figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@Override</span></span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> <span class="hljs-keyword">void</span> <span class="hljs-title">complete</span><span class="hljs-params">()</span> </span>&#123;</span><br><span class="line">    ...</span><br><span class="line">    request.getCoyoteRequest().action(ActionCode.ASYNC_COMPLETE, <span class="hljs-keyword">null</span>);</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
-
-<p>这里进入asyncStateMachine.asyncComplete()方法， STARTED → COMPLETING, 然后在tomcat中提交新线程</p>
-<p>注：同样地，在业务线程提前完成的情况下，asyncContext.complete → asyncStateMachine.asyncComplete()提前被调用， STARTING → COMPLETE_PENDING,  这种情况下不会再往tomcat线程池中提交新线程</p>
-<p>回到第一个线程， 同样的在AbstractProcessorLight.process → AbstractProcessor.asyncPostProcess → AsyncStateMachine.asyncPostProcess, 这一段，将状态COMPLETE_PENDING → COMPLETING → DISPATCHED</p>
-<h3 id="第二次SocketProcessor-1"><a href="#第二次SocketProcessor-1" class="headerlink" title="第二次SocketProcessor"></a>第二次SocketProcessor</h3><p>类似案例一， 在AbstractProcessorLight.process → AbstractProcessor.asyncPostProcess → AsyncStateMachine.asyncPostProcess, 这一段，将状态COMPLETING → DISPATCHED， 达到终态</p>
-<h2 id="总结"><a href="#总结" class="headerlink" title="总结"></a>总结</h2><p>异步servlet的状态管理主要依靠ServletRequest . hook(Http11Processor)中记录的AsyncStateMachine，AsyncStateMachine中记录的AsyncState，从而判断当前是否isAsync\isAsyncDispatching等等，从而控制线程的提交、响应的返回等。</p>
-<p>一般情况下，为了处理一个异步servlet，总共需要开启三次线程，两次是SocketProcessor，提交到tomcat线程池中；一次是业务线程，用于做异步操作。第一次SocketProcessor由一直在监听请求的Acceptor创建，第一个SocketProcessor线程启动业务线程，业务线程再回调第二个SocketProcessor；</p>
-<p>当业务线程执行提前完成时，第二个SocketProcessor就不会被提交了，所以是需要两个线程。</p>
-
         </div>
         
+        
+        <div class="level is-mobile">
+            <div class="level-start">
+                <div class="level-item">
+                <a class="button is-size-7 is-light" href="/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/#more">阅读更多</a>
+                </div>
+            </div>
+        </div>
         
         
     </div>
@@ -298,22 +213,22 @@
             <div class="level-item has-text-centered" style="flex-shrink: 1">
                 <div>
                     
-                        <img class="image is-128x128 has-mb-6" src="/blogs/images/avatar.png" alt="Your name">
+                        <img class="image is-128x128 has-mb-6" src="/blogs/images/avatar.png" alt="TangTangWan">
                     
                     
                     <p class="is-size-4 is-block">
-                        Your name
+                        TangTangWan
                     </p>
                     
                     
                     <p class="is-size-6 is-block">
-                        Your title
+                        一个程序媛
                     </p>
                     
                     
                     <p class="is-size-6 is-flex is-flex-center has-text-grey">
                         <i class="fas fa-map-marker-alt has-mr-7"></i>
-                        <span>Your location</span>
+                        <span>中国, 北京</span>
                     </p>
                     
                 </div>
@@ -357,88 +272,8 @@
         </div>
         
         
-        <div class="level is-mobile">
-            
-            <a class="level-item button is-white is-marginless" target="_blank"
-                title="Github" href="https://github.com/ppoffice">
-                
-                <i class="fab fa-github"></i>
-                
-            </a>
-            
-            <a class="level-item button is-white is-marginless" target="_blank"
-                title="Facebook" href="https://facebook.com">
-                
-                <i class="fab fa-facebook"></i>
-                
-            </a>
-            
-            <a class="level-item button is-white is-marginless" target="_blank"
-                title="Twitter" href="https://twitter.com">
-                
-                <i class="fab fa-twitter"></i>
-                
-            </a>
-            
-            <a class="level-item button is-white is-marginless" target="_blank"
-                title="Dribbble" href="https://dribbble.com">
-                
-                <i class="fab fa-dribbble"></i>
-                
-            </a>
-            
-            <a class="level-item button is-white is-marginless" target="_blank"
-                title="RSS" href="/blogs/">
-                
-                <i class="fas fa-rss"></i>
-                
-            </a>
-            
-        </div>
-        
     </div>
 </div>
-    
-        
-    
-        
-
-<div class="card widget">
-    <div class="card-content">
-        <div class="menu">
-        <h3 class="menu-label">
-            链接
-        </h3>
-        <ul class="menu-list">
-        
-            <li>
-                <a class="level is-mobile" href="https://hexo.io" target="_blank">
-                    <span class="level-left">
-                        <span class="level-item">Hexo</span>
-                    </span>
-                    <span class="level-right">
-                        <span class="level-item tag">hexo.io</span>
-                    </span>
-                </a>
-            </li>
-        
-            <li>
-                <a class="level is-mobile" href="https://github.com/ppoffice" target="_blank">
-                    <span class="level-left">
-                        <span class="level-item">PPOffice</span>
-                    </span>
-                    <span class="level-right">
-                        <span class="level-item tag">github.com</span>
-                    </span>
-                </a>
-            </li>
-        
-        </ul>
-        </div>
-    </div>
-</div>
-
-
     
         
 <div class="card widget">

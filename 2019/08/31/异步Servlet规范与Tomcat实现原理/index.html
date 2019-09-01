@@ -10,19 +10,19 @@
 <title>异步Servlet规范与Tomcat实现原理 - TangTangWan&#39;s Blog</title>
 
 
-    <meta name="description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。 异步Servlet的Why &amp;amp; What有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是">
+    <meta name="description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。">
 <meta name="keywords" content="Java,Tomcat">
 <meta property="og:type" content="article">
 <meta property="og:title" content="异步Servlet规范与Tomcat实现原理">
 <meta property="og:url" content="https://github.com/TangTangWan/blogs/2019/08/31/异步Servlet规范与Tomcat实现原理/index.html">
 <meta property="og:site_name" content="TangTangWan&#39;s Blog">
-<meta property="og:description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。 异步Servlet的Why &amp;amp; What有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是">
+<meta property="og:description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://github.com/blogs/images/og_image.png">
-<meta property="og:updated_time" content="2019-08-31T15:15:10.726Z">
+<meta property="og:updated_time" content="2019-08-31T16:49:03.360Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="异步Servlet规范与Tomcat实现原理">
-<meta name="twitter:description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。 异步Servlet的Why &amp;amp; What有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是">
+<meta name="twitter:description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。">
 <meta name="twitter:image" content="https://github.com/blogs/images/og_image.png">
 
 
@@ -155,7 +155,7 @@
                 <span class="level-item has-text-grey">
                     
                     
-                    23 分钟 读完 (大约 3524 个字)
+                    24 分钟 读完 (大约 3525 个字)
                 </span>
                 
                 
@@ -169,6 +169,7 @@
         </h1>
         <div class="content">
             <p>本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。</p>
+<a id="more"></a>
 <h2 id="异步Servlet的Why-amp-What"><a href="#异步Servlet的Why-amp-What" class="headerlink" title="异步Servlet的Why &amp; What"></a>异步Servlet的Why &amp; What</h2><p>有时候，Filter 及/或 Servlet 在生成响应之前必须等待一些资源或事件以便完成请求处理。比如，Servlet 在 进行生成一个响应之前可能等待一个可用的 JDBC 连接，或者一个远程 web 服务的响应，或者一个 JMS 消 息，或者一个应用程序事件。在 Servlet 中等待是一个低效的操作，因为这是阻塞操作，从而白白占用一个 线程或其他一些受限资源。</p>
 <p>Servlet 3.0 引入了异步处理请求的能力，使线程可以返回到容器，从而执行更多的任务。一个典型的异步处理事件顺序是:</p>
 <ol>
@@ -346,22 +347,22 @@
             <div class="level-item has-text-centered" style="flex-shrink: 1">
                 <div>
                     
-                        <img class="image is-128x128 has-mb-6" src="/blogs/images/avatar.png" alt="Your name">
+                        <img class="image is-128x128 has-mb-6" src="/blogs/images/avatar.png" alt="TangTangWan">
                     
                     
                     <p class="is-size-4 is-block">
-                        Your name
+                        TangTangWan
                     </p>
                     
                     
                     <p class="is-size-6 is-block">
-                        Your title
+                        一个程序媛
                     </p>
                     
                     
                     <p class="is-size-6 is-flex is-flex-center has-text-grey">
                         <i class="fas fa-map-marker-alt has-mr-7"></i>
-                        <span>Your location</span>
+                        <span>中国, 北京</span>
                     </p>
                     
                 </div>
@@ -405,88 +406,8 @@
         </div>
         
         
-        <div class="level is-mobile">
-            
-            <a class="level-item button is-white is-marginless" target="_blank"
-                title="Github" href="https://github.com/ppoffice">
-                
-                <i class="fab fa-github"></i>
-                
-            </a>
-            
-            <a class="level-item button is-white is-marginless" target="_blank"
-                title="Facebook" href="https://facebook.com">
-                
-                <i class="fab fa-facebook"></i>
-                
-            </a>
-            
-            <a class="level-item button is-white is-marginless" target="_blank"
-                title="Twitter" href="https://twitter.com">
-                
-                <i class="fab fa-twitter"></i>
-                
-            </a>
-            
-            <a class="level-item button is-white is-marginless" target="_blank"
-                title="Dribbble" href="https://dribbble.com">
-                
-                <i class="fab fa-dribbble"></i>
-                
-            </a>
-            
-            <a class="level-item button is-white is-marginless" target="_blank"
-                title="RSS" href="/blogs/">
-                
-                <i class="fas fa-rss"></i>
-                
-            </a>
-            
-        </div>
-        
     </div>
 </div>
-    
-        
-    
-        
-
-<div class="card widget">
-    <div class="card-content">
-        <div class="menu">
-        <h3 class="menu-label">
-            链接
-        </h3>
-        <ul class="menu-list">
-        
-            <li>
-                <a class="level is-mobile" href="https://hexo.io" target="_blank">
-                    <span class="level-left">
-                        <span class="level-item">Hexo</span>
-                    </span>
-                    <span class="level-right">
-                        <span class="level-item tag">hexo.io</span>
-                    </span>
-                </a>
-            </li>
-        
-            <li>
-                <a class="level is-mobile" href="https://github.com/ppoffice" target="_blank">
-                    <span class="level-left">
-                        <span class="level-item">PPOffice</span>
-                    </span>
-                    <span class="level-right">
-                        <span class="level-item tag">github.com</span>
-                    </span>
-                </a>
-            </li>
-        
-        </ul>
-        </div>
-    </div>
-</div>
-
-
     
         
 <div class="card widget">
