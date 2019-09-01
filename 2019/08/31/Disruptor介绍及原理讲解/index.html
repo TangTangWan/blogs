@@ -19,7 +19,7 @@
 <meta property="og:description" content="简介Disruptor是一个无锁有界内存队列开源框架，最大的特点就是性能非常高高高。很多知名项目都有用到它比如我们熟悉的Log4j 2 . 本文主要介绍它如何做到高性能，以及具体的框架设计。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://github.com/blogs/images/og_image.png">
-<meta property="og:updated_time" content="2019-08-31T16:48:26.464Z">
+<meta property="og:updated_time" content="2019-09-01T16:39:02.404Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="Disruptor介绍及原理讲解">
 <meta name="twitter:description" content="简介Disruptor是一个无锁有界内存队列开源框架，最大的特点就是性能非常高高高。很多知名项目都有用到它比如我们熟悉的Log4j 2 . 本文主要介绍它如何做到高性能，以及具体的框架设计。">
@@ -155,7 +155,7 @@
                 <span class="level-item has-text-grey">
                     
                     
-                    17 分钟 读完 (大约 2586 个字)
+                    17 分钟 读完 (大约 2522 个字)
                 </span>
                 
                 
@@ -174,7 +174,7 @@
 
 <h2 id="为什么性能这么强大？"><a href="#为什么性能这么强大？" class="headerlink" title="为什么性能这么强大？"></a>为什么性能这么强大？</h2><p>主要是因为有这三个法宝：RingBuffer，无锁设计和缓存行填充。</p>
 <h3 id="RingBuffer"><a href="#RingBuffer" class="headerlink" title="RingBuffer"></a>RingBuffer</h3><p>Disruptor底层采用RingBuffer的结构，RingBuffer大家都知道，就是一个循环使用下标的数组嘛。</p>
-<p><img src="https://upload-images.jianshu.io/upload_images/1755236-4e8fcf277db0c0f9.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"></p>
+<p><img src="http://img.eweew.com/disruptor/1755236-4e8fcf277db0c0f9.png" alt="image.png"></p>
 <p>计算访问下标的时候，通过取余计算 （cursor % size )来得到数组下标。（一个trick是，当size是2的幂的时候，可以用 cursor &amp; (size - 1) 来快速计算下标。所以Disruptor指定size必须是2的幂。）</p>
 <p>用RingBuffer的好处：</p>
 <ol>
@@ -188,10 +188,10 @@
 <p>当有多个生产者时，Disruptor采用CAS来保证游标的线程安全。在整个复杂的框架中，只有这一个地方出现多线程竞争修改同一个变量值。具体的交互在后面讲。</p>
 <p>（另一方面，用volatile来标记游标，采用内存屏障来代替锁？）</p>
 <h3 id="缓存行填充"><a href="#缓存行填充" class="headerlink" title="缓存行填充"></a>缓存行填充</h3><p>先来了解一个概念，“<strong>伪共享</strong>”。</p>
-<p><img src="https://upload-images.jianshu.io/upload_images/1755236-f7e9107a6253923e.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"></p>
+<p><img src="http://img.eweew.com/disruptor/1755236-f7e9107a6253923e.png" alt="image.png"></p>
 <p>我们知道计算机有多级的缓存体系，越靠近CPU的缓存，速度越快，容量越小。而缓存由很多cache line组成，每个cache line通常是64bytes，所以一个cache line通常可以缓存8个long变量。从内存中拉取数据的时候，会把相邻的数据都一起加载到缓存中。在某些情况下这个缓存行优势会失效，导致并发速度反而下降了，这种情况称为<strong>伪共享</strong>。以下是一个典型的例子：</p>
 <p>假设有两个线程Thread1和Thread2，分别在Core1和Core2上运行。有两个变量head和tail由它们共享，Thread1只读写head， Thread2只读写tail。理想情况下它们不应该有干扰，但是我们可以看到，当Thread1写入head以后，其他Core对应的cache line被都置为失效，也就意味着Core2想要读写tail，需要从内存中重新读取，而这显然是一种浪费。</p>
-<p><img src="https://upload-images.jianshu.io/upload_images/1755236-d845344d1481454c.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image"> </p>
+<p><img src="http://img.eweew.com/disruptor/1755236-d845344d1481454c.png" alt="image"> </p>
 <p>我们可以通过缓存行填充来解决这类问题：</p>
 <figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br><span class="line">12</span><br><span class="line">13</span><br><span class="line">14</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">LhsPadding</span></span></span><br><span class="line"><span class="hljs-class"></span>&#123;</span><br><span class="line">    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">long</span> p1, p2, p3, p4, p5, p6, p7;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">Value</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">LhsPadding</span></span></span><br><span class="line"><span class="hljs-class"></span>&#123;</span><br><span class="line">    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">volatile</span> <span class="hljs-keyword">long</span> value;</span><br><span class="line">&#125;</span><br><span class="line"> </span><br><span class="line"><span class="hljs-class"><span class="hljs-keyword">class</span> <span class="hljs-title">RhsPadding</span> <span class="hljs-keyword">extends</span> <span class="hljs-title">Value</span></span></span><br><span class="line"><span class="hljs-class"></span>&#123;</span><br><span class="line">    <span class="hljs-keyword">protected</span> <span class="hljs-keyword">long</span> p9, p10, p11, p12, p13, p14, p15;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
@@ -199,21 +199,21 @@
 <p>在由我们自己定义的Event类中，也值得这样做。如果有不同的生产者往不同的字段写入（？），我们要确保各个字段之间不会出现伪共享。</p>
 <h2 id="具体设计"><a href="#具体设计" class="headerlink" title="具体设计"></a>具体设计</h2><p>直觉上理解一下Disruptor的设计：Disruptor通过对游标的管理，保证任何时候只有一个生产者去写一个槽，就省了很多并发问题；只要好好看好游标就行了。</p>
 <h3 id="消费"><a href="#消费" class="headerlink" title="消费"></a>消费</h3><p>先从比较好理解的消费者讲起。</p>
-<p><img src="https://upload-images.jianshu.io/upload_images/1755236-405665aa936e87e8.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="7"> </p>
+<p><img src="http://img.eweew.com/disruptor/1755236-405665aa936e87e8.png" alt="7"> </p>
 <p>在Disruptor中，消费者被称为EventProcessor，通过SequenceBarrier和RingBuffer交互。</p>
 <p>如上图Stage2所示，事件处理器的最大序号是16.它向SequenceBarrier调用waitFor（17）以获得17格中的数据。如果没有数据写入RingBuffer，Stage2事件处理器将挂起等待下一个序号。但是，如上图所示的情况，RingBuffer已经被填充到18格，所以waitFor函数将返回18并通知事件处理器，它可以读取包括直到18格在内的数据，如下图所示。</p>
-<p><img src="https://upload-images.jianshu.io/upload_images/1755236-298b8e6cbbf20f63.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="6"> </p>
+<p><img src="http://img.eweew.com/disruptor/1755236-298b8e6cbbf20f63.png" alt="6"> </p>
 <p>你应该已经感觉得到，这样做是怎样有助于平缓延迟的峰值了——以前需要逐个节点地询问“我可以拿下一个数据吗？现在可以了么？现在呢？”，消费者现在只需要简单的说“当你拿到的数字比我这个要大的时候请告诉我”，函数返回值会告诉它有多少个新的节点可以读取数据了。因为这些新的节点的确已经写入了数据（<strong><em>Ring Buffer</em></strong>本身的序号已经更新），而且消费者对这些节点的唯一操作是读而不是写，因此访问不用加锁。这太好了，不仅代码实现起来可以更加安全和简单，而且不用加锁使得速度更快。</p>
 <p>另一个好处是——你可以用多个消费者去读同一个<strong><em>RingBuffer</em></strong> ，不需要加锁，也不需要用另外的队列来协调不同的线程(消费者)。这样你可以在<strong><em>Disruptor</em></strong>的协调下实现真正的并发数据处理。</p>
 <h3 id="生产"><a href="#生产" class="headerlink" title="生产"></a>生产</h3><p>向RingBuffer写入数据需要经过两阶段提交。</p>
 <h4 id="只有一个发布者时"><a href="#只有一个发布者时" class="headerlink" title="只有一个发布者时"></a>只有一个发布者时</h4><p>首先，发布者必须确定RingBuffer中下一个可以插入的格, RingBuffer持有最近写入格的序号（下图中的18格），从而确定下一个插入格的序号。RingBuffer通过检查所有EventProcessor正在从RingBuffer中读取的当前序号来判断下一个插入格是否空闲，只需要保证下一个插入格已经被所有EventProcessor读取过即可。</p>
-<p><img src="https://upload-images.jianshu.io/upload_images/1755236-ede2fa2f83f6bfe6.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="3"> </p>
+<p><img src="http://img.eweew.com/disruptor/1755236-ede2fa2f83f6bfe6.png" alt="3"> </p>
 <p>发现了下一个插入格:</p>
-<p><img src="https://upload-images.jianshu.io/upload_images/1755236-f59b14f549576ce5.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="4"> </p>
+<p><img src="http://img.eweew.com/disruptor/1755236-f59b14f549576ce5.png" alt="4"> </p>
 <p>当发布者得到下一个序号后，它可以获得该格中的对象，并可以对该对象进行任意操作。你可以把格想象成一个简单的可以写入任意值的容器。</p>
 <p>同时，在发布者处理19格数据的时候，RingBuffer的序号依然是18，所以其他事件处理器将不会读到19格中的数据。</p>
 <p>对象的改动保存进了RingBuffer：</p>
-<p><img src="https://upload-images.jianshu.io/upload_images/1755236-1394fe020a2c7fc3.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="5"> </p>
+<p><img src="http://img.eweew.com/disruptor/1755236-1394fe020a2c7fc3.png" alt="5"> </p>
 <p>最终，发布者将数据写入19格后，通知RingBuffer发布19格的数据。这时，RingBuffer更新序号并且所有从RingBuffer读数据的事件处理器都可以看到19格中的数据。</p>
 <p>总结一下，<strong>发布者需要先申请一个可写入的位置，然后再写入然后提交，这是一个明显的两阶段提交设计。</strong></p>
 <h4 id="有多个发布者时"><a href="#有多个发布者时" class="headerlink" title="有多个发布者时"></a>有多个发布者时</h4><p>单生产者的情况比较简单，当有多个生产者时，申请写入位置的时候就会产生竞争。上文说过，Disruptor采用CAS来保证游标的线程安全。直接上源码吧。这段源码应该是最能体现Disruptor核心设计思想的部分了。</p>

@@ -19,7 +19,7 @@
 <meta property="og:description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。">
 <meta property="og:locale" content="zh-CN">
 <meta property="og:image" content="https://github.com/blogs/images/og_image.png">
-<meta property="og:updated_time" content="2019-08-31T16:49:03.360Z">
+<meta property="og:updated_time" content="2019-09-01T16:33:58.201Z">
 <meta name="twitter:card" content="summary">
 <meta name="twitter:title" content="异步Servlet规范与Tomcat实现原理">
 <meta name="twitter:description" content="本篇比较流水账，但是也很详细具体，适合想要深入探索的人看。">
@@ -155,7 +155,7 @@
                 <span class="level-item has-text-grey">
                     
                     
-                    24 分钟 读完 (大约 3525 个字)
+                    23 分钟 读完 (大约 3477 个字)
                 </span>
                 
                 
@@ -184,10 +184,10 @@
 <li>过了一段时间后，所请求的资源变为可用，此时处理线程继续处理事件，要么在同一个线程，要么通过AsyncContext 分派到容器中的一个资源上。</li>
 </ol>
 <h2 id="Tomcat如何处理连接及对接servlet"><a href="#Tomcat如何处理连接及对接servlet" class="headerlink" title="Tomcat如何处理连接及对接servlet"></a>Tomcat如何处理连接及对接servlet</h2><p>先说非异步的servlet线程池，异步servlet在此基础上进一步扩展。</p>
-<h3 id="EndPoint"><a href="#EndPoint" class="headerlink" title="EndPoint"></a>EndPoint</h3><p><code>EndPoint</code>用于处理具体连接和传输数据，即用来实现网络连接和控制，它是服务器对外<code>I/O</code>操作的接入点。主要任务是管理对外的<code>socket</code>连接，同时将建立好的<code>socket</code>连接交到合适的工作线程中去。 里面两个主要的属性类是<code>Acceptor</code>和<code>Poller</code>、<code>SocketProcessor</code>。 我们以<code>NioEndpoint</code>为例，其内部请求处理具体的流程如下:<br><img src="https://upload-images.jianshu.io/upload_images/1755236-ce1f41b7e03d17bd.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="img"><br>展开时序图<br><img src="https://upload-images.jianshu.io/upload_images/1755236-a0967ef2e03cc7eb.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"></p>
+<h3 id="EndPoint"><a href="#EndPoint" class="headerlink" title="EndPoint"></a>EndPoint</h3><p><code>EndPoint</code>用于处理具体连接和传输数据，即用来实现网络连接和控制，它是服务器对外<code>I/O</code>操作的接入点。主要任务是管理对外的<code>socket</code>连接，同时将建立好的<code>socket</code>连接交到合适的工作线程中去。 里面两个主要的属性类是<code>Acceptor</code>和<code>Poller</code>、<code>SocketProcessor</code>。 我们以<code>NioEndpoint</code>为例，其内部请求处理具体的流程如下:<br><img src="http://img.eweew.com/tomcat/1755236-ce1f41b7e03d17bd.png" alt="img"><br>展开时序图<br><img src="http://img.eweew.com/tomcat/1755236-a0967ef2e03cc7eb.png" alt="image.png"></p>
 <h3 id="Acceptor和Poller"><a href="#Acceptor和Poller" class="headerlink" title="Acceptor和Poller"></a>Acceptor和Poller</h3><p>Acceptor和Poller都是实现了Runnable接口的类，在tomcat启动时，它们也作为线程start起来。</p>
 <p>Acceptor接受到请求，用接收到的连接构造NioChannel对象，用该channel对象构造出PollerEvent，添加进Poller中</p>
-<p>Poller的run函数，将注册的events逐个处理，将event对应的channel注册到某个Selector中(利用IO复用，进行读取)。selector.select()后，根据读取的SelectionKey，构造socketProcessor(实现了Runnable)，提交到tomcat线程池。<br><img src="https://upload-images.jianshu.io/upload_images/1755236-a4bbcf993621f610.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"><br>而tomcat线程池中的socketProcessor被调度到后，经过一系列handler, processor的处理之后(验证\http协议解析等)，最后对接到了HttpServlet上（对应tomcat-embed-core-8.5.43版本）:<br><img src="https://upload-images.jianshu.io/upload_images/1755236-340e0316d57ab847.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"><br>网上版本：<br><img src="https://upload-images.jianshu.io/upload_images/1755236-b18605c364cd41a1.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"></p>
+<p>Poller的run函数，将注册的events逐个处理，将event对应的channel注册到某个Selector中(利用IO复用，进行读取)。selector.select()后，根据读取的SelectionKey，构造socketProcessor(实现了Runnable)，提交到tomcat线程池。<br><img src="http://img.eweew.com/tomcat/1755236-a4bbcf993621f610.png" alt="image.png"><br>而tomcat线程池中的socketProcessor被调度到后，经过一系列handler, processor的处理之后(验证\http协议解析等)，最后对接到了HttpServlet上（对应tomcat-embed-core-8.5.43版本）:<br><img src="http://img.eweew.com/tomcat/1755236-340e0316d57ab847.png" alt="image.png"><br>网上版本：<br><img src="http://img.eweew.com/tomcat/1755236-b18605c364cd41a1.png" alt="image.png"></p>
 <h2 id="异步Servlet规范概要-以Servlet3-1规范为准"><a href="#异步Servlet规范概要-以Servlet3-1规范为准" class="headerlink" title="异步Servlet规范概要(以Servlet3.1规范为准)"></a>异步Servlet规范概要(以Servlet3.1规范为准)</h2><p>Servlet3.0开始，添加了一些方法/类以支持异步处理，这里列出一些比较关键的部分。</p>
 <p>ServletRequest</p>
 <ul>
@@ -217,7 +217,7 @@
 <h2 id="案例一"><a href="#案例一" class="headerlink" title="案例一"></a>案例一</h2><p>我们的示例代码：</p>
 <figure class="highlight java hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br></pre></td><td class="code"><pre><span class="line"><span class="hljs-meta">@RequestMapping</span>(<span class="hljs-string">"/async"</span>)</span><br><span class="line"><span class="hljs-function"><span class="hljs-keyword">public</span> Callable&lt;BaseResponse&gt; <span class="hljs-title">callable</span><span class="hljs-params">()</span> </span>&#123;</span><br><span class="line">    <span class="hljs-keyword">return</span> () -&gt; &#123;</span><br><span class="line">        Thread.sleep(<span class="hljs-number">1000</span>);</span><br><span class="line">        <span class="hljs-keyword">return</span> StandardResponse.make(<span class="hljs-string">"hello"</span>);</span><br><span class="line">    &#125;;</span><br><span class="line">&#125;</span><br></pre></td></tr></table></figure>
 
-<h3 id="流水账开始……"><a href="#流水账开始……" class="headerlink" title="流水账开始……"></a>流水账开始……</h3><h3 id="第一次SocketProcessor"><a href="#第一次SocketProcessor" class="headerlink" title="第一次SocketProcessor"></a>第一次SocketProcessor</h3><p><img src="https://upload-images.jianshu.io/upload_images/1755236-df17876395cb5d04.png?imageMogr2/auto-orient/strip%7CimageView2/2/w/1240" alt="image.png"><br>前面的流程和上文说的一样，Poller将SocketProcessor提交到tomcat线程池(由EndPoint持有)，然后socketProcessor被调度，执行其run方法，run方法调用doRun()。</p>
+<h3 id="流水账开始……"><a href="#流水账开始……" class="headerlink" title="流水账开始……"></a>流水账开始……</h3><h3 id="第一次SocketProcessor"><a href="#第一次SocketProcessor" class="headerlink" title="第一次SocketProcessor"></a>第一次SocketProcessor</h3><p><img src="http://img.eweew.com/tomcat/1755236-df17876395cb5d04.png" alt="image.png"><br>前面的流程和上文说的一样，Poller将SocketProcessor提交到tomcat线程池(由EndPoint持有)，然后socketProcessor被调度，执行其run方法，run方法调用doRun()。</p>
 <p>在我们的示例中，spring框架会根据返回值，进入异步servlet的处理流程，调用栈如下：</p>
 <figure class="highlight plain hljs"><table><tr><td class="gutter"><pre><span class="line">1</span><br><span class="line">2</span><br><span class="line">3</span><br><span class="line">4</span><br><span class="line">5</span><br><span class="line">6</span><br><span class="line">7</span><br><span class="line">8</span><br><span class="line">9</span><br><span class="line">10</span><br><span class="line">11</span><br></pre></td><td class="code"><pre><span class="line">startAsync:121, StandardServletAsyncWebRequest (org.springframework.web.context.request.async)</span><br><span class="line">startAsyncProcessing:466, WebAsyncManager (org.springframework.web.context.request.async)</span><br><span class="line">……</span><br><span class="line">handleReturnValue:51, CallableMethodReturnValueHandler (org.springframework.web.servlet.mvc.method.annotation)</span><br><span class="line">handleReturnValue:82, HandlerMethodReturnValueHandlerComposite (org.springframework.web.method.support)</span><br><span class="line">invokeAndHandle:119, ServletInvocableHandlerMethod (org.springframework.web.servlet.mvc.method.annotation)</span><br><span class="line">……</span><br><span class="line">doDispatch:1038, DispatcherServlet (org.springframework.web.servlet)</span><br><span class="line">doService:942, DispatcherServlet (org.springframework.web.servlet)</span><br><span class="line">……</span><br><span class="line">service:634, HttpServlet (javax.servlet.http)</span><br></pre></td></tr></table></figure>
 
